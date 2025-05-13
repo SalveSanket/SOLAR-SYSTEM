@@ -5,6 +5,10 @@ pipeline {
         NODE_ENV = 'production'
     }
 
+    tools {
+        nodejs 'nodejs-22-6-0'
+    }
+
     stages {
         stage('Checkout Code') {
             steps {
