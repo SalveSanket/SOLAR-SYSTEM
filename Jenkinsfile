@@ -12,7 +12,6 @@ pipeline {
                 checkout scm
             }
         }
-
         stage('VM Node Version') {
             steps {
                 sh'''
