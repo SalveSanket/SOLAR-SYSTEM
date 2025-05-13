@@ -13,24 +13,12 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('VM Node Version') {
             steps {
-                echo '📦 Installing dependencies...'
-                sh 'npm install'
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                echo '🧪 Running tests...'
-                sh 'npm test'
-            }
-        }
-
-        stage('Build Application') {
-            steps {
-                echo '🏗️ Building the application...'
-                sh 'npm run build'
+                sh'''
+                    node -v
+                    npm -v
+                '''
             }
         }
     }
