@@ -28,6 +28,7 @@ pipeline {
             steps {
                 echo '🔧 Installing dependencies....'
                 sh 'npm install --no-audit'
+                echo '🔧 Dependencies installed successfully!'
             }
         }
     }
