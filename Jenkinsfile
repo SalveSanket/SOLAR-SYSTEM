@@ -34,11 +34,22 @@ pipeline {
             }
         }
 
-        stage('NPM Dependency Audit') {
-            steps {
-                echo '🔍 Running npm audit....'
-                sh 'npm audit --audit-level=critical'
-                echo '🔍 Audit completed successfully!'
+        stage('Dependency Check') {
+            parallel {  
+                stage('NPM Dependency Audit'){
+                    echo '🔍 Running npm audit....'
+                    sh 'npm audit --audit-level=critical'
+                    echo '🔍 Audit completed successfully!' 
+                }
+                
+                stage('OSWAP Dependency check') {
+                    steps {
+                        dependenciesCheck additionalArguments: '''
+                            --scan \'./\'
+                            --out  \'./\'
+                            --format \'All\'
+                            --prettyprint''', odcinstallation: 'OWASP-DepCheck-10'
+                    }
             }
         }
     }
