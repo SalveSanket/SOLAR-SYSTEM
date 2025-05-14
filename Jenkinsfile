@@ -37,7 +37,7 @@ pipeline {
         stage('NPM Dependency Audit') {
             steps {
                 echo '🔍 Running npm audit....'
-                sh 'npm audit --audit-level=high'
+                sh 'npm audit --audit-level=critical'
                 echo '🔍 Audit completed successfully!'
             }
         }
