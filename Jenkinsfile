@@ -52,7 +52,7 @@ pipeline {
                             --format \'ALL\' 
                             --prettyPrint
                             --data /var/lib/jenkins/owasp-data
-                        ''', odcInstallation: 'OWASP-DepCheck-10'
+                        ''', odcInstallation: 'OWASP-DepCheck-8.4.0'
 
                         dependencyCheckPublisher failedTotalCritical: 1, pattern: 'dependency-check-report.xml', stopBuild: true
                     }
