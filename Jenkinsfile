@@ -16,19 +16,29 @@ pipeline {
                 checkout scm
             }
         }
+
         stage('VM Node Version') {
             steps {
-                sh'''
+                sh '''
                     node -v
                     npm -v
                 '''
             }
         }
+
         stage('Install Dependencies') {
             steps {
                 echo '🔧 Installing dependencies....'
                 sh 'npm install --no-audit'
                 echo '🔧 Dependencies installed successfully!'
+            }
+        }
+
+        stage('NPM Dependency Audit') {
+            steps {
+                echo '🔍 Running npm audit....'
+                sh 'npm audit --audit-level=high'
+                echo '🔍 Audit completed successfully!'
             }
         }
     }
