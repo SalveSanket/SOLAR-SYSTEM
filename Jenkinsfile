@@ -57,6 +57,8 @@ pipeline {
                             --format ALL 
                             --prettyPrint
                             --data /var/lib/jenkins/owasp-data
+                            --noupdate
+                            --exclude node_modules
                         ''', odcInstallation: 'OWASP-DepCheck'
 
                         dependencyCheckPublisher(
