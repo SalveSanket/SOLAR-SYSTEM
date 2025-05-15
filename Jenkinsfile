@@ -35,17 +35,19 @@ pipeline {
         }
 
         stage('Dependency Check') {
-            parallel {  
+            parallel {
                 stage('NPM Dependency Audit') {
                     steps {
                         echo '🔍 Running npm audit....'
                         sh 'npm audit --audit-level=critical'
-                        echo '🔍 Audit completed successfully!' 
+                        echo '🔍 Audit completed successfully!'
                     }
                 }
 
                 stage('OWASP Dependency Check') {
                     steps {
+                        echo '🛡️ Running OWASP Dependency Check...'
+
                         dependencyCheck additionalArguments: '''
                             --scan ./
                             --out ./ 
@@ -55,29 +57,24 @@ pipeline {
                         ''', odcInstallation: 'OWASP-DepCheck'
 
                         dependencyCheckPublisher failedTotalCritical: 1, pattern: 'dependency-check-report.xml', stopBuild: true
+
+                        echo '📊 Publishing OWASP Dependency Check report....'
+                        publishHTML(target: [
+                            reportName: 'OWASP Dependency Check Report',
+                            reportDir: '.',
+                            reportFiles: 'dependency-check-report.html',
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            allowMissing: false
+                        ])
+
+                        echo '📦 Archiving HTML report...'
+                        archiveArtifacts artifacts: 'dependency-check-report.html', fingerprint: true
+
+                        echo '🧪 Publishing JUnit results...'
+                        junit allowEmptyResults: true, testResults: 'dependency-check-junit.xml'
                     }
                 }
-            }
-        }
-
-        stage('Publish Dependency Check Report') {
-            steps {
-                echo '📊 Publishing OWASP Dependency Check report....'
-
-                publishHTML(target: [
-                    reportName: 'OWASP Dependency Check Report',
-                    reportDir: '.',
-                    reportFiles: 'dependency-check-report.html',
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    allowMissing: false
-                ])
-
-                echo '📦 Archiving HTML report...'
-                archiveArtifacts artifacts: 'dependency-check-report.html', fingerprint: true
-
-                echo '🧪 Publishing JUnit results...'
-                junit allowEmptyResults: true, testResults: 'dependency-check-junit.xml'
             }
         }
     }
