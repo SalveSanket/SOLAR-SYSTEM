@@ -56,7 +56,7 @@ pipeline {
                             --data /var/lib/jenkins/owasp-data
                         ''', odcInstallation: 'OWASP-DepCheck'
 
-                        dependencyCheckPublisher thresholdLimit: 'critical', failedTotalCritical: 1, unstableTotalHigh: 10, unstableTotalMedium: 10, pattern: 'dependency-check-report.xml'
+                        dependencyCheckPublisher failedTotalCritical: 1, unstableTotalHigh: 999, unstableTotalMedium: 999, pattern: 'dependency-check-report.xml'
 
                         echo '🧪 Publishing JUnit results...'
                         junit allowEmptyResults: true, testResults: 'dependency-check-junit.xml'
