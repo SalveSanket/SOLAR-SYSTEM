@@ -60,10 +60,7 @@ pipeline {
                             failedTotalCritical: 1,
                             pattern: 'dependency-check-report.xml'
                         )
-
-                        echo '🧪 Publishing JUnit results...'
-                        junit allowEmptyResults: true, testResults: 'dependency-check-junit.xml'
-
+                        
                         echo '📦 Archiving HTML report...'
                         publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'dependency-check-HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
