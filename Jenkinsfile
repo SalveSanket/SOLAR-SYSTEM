@@ -32,6 +32,7 @@ pipeline {
             steps {
                 echo '🔧 Installing dependencies....'
                 sh 'npm install --no-audit'
+                sh 'npm install --include=dev --no-audit'
                 echo '🔧 Dependencies installed successfully!'
             }
         }
