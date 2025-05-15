@@ -13,6 +13,7 @@
     "lines": 90
   },
   "dependencies": {
+    "chai": "^4.3.7",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "mocha-junit-reporter": "^2.2.1",
@@ -22,7 +23,6 @@
     "time-span": "^5.1.0"
   },
   "devDependencies": {
-    "chai": "*",
     "chai-http": "*",
     "mocha": "*"
   }
