@@ -58,18 +58,8 @@ pipeline {
 
                         dependencyCheckPublisher failedTotalCritical: 1, pattern: 'dependency-check-report.xml', stopBuild: true
 
-                        echo '📊 Publishing OWASP Dependency Check report....'
-                        publishHTML(target: [
-                            reportName: 'OWASP Dependency Check Report',
-                            reportDir: '.',
-                            reportFiles: 'dependency-check-report.html',
-                            alwaysLinkToLastBuild: true,
-                            keepAll: true,
-                            allowMissing: false
-                        ])
-
                         echo '📦 Archiving HTML report...'
-                        archiveArtifacts artifacts: 'dependency-check-report.html', fingerprint: true
+                        publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'dependency-check-HTML Report', reportTitles: '', useWrapperFileDirectly: true])
 
                         echo '🧪 Publishing JUnit results...'
                         junit allowEmptyResults: true, testResults: 'dependency-check-junit.xml'
