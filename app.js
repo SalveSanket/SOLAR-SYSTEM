@@ -18,16 +18,13 @@ mongoose.connect(process.env.MONGO_URI, {
     pass: process.env.MONGO_PASSWORD,
     useNewUrlParser: true,
     useUnifiedTopology: true
-}).then(() => {
-    console.log("✅ MongoDB connection successful.");
-
-    app.listen(3000, () => {
-        console.log("🚀 Server successfully running on port 3000");
-    });
-}).catch((err) => {
-    console.error("❌ MongoDB connection error:", err);
-    process.exit(1); // Exit if DB connection fails
-});
+}, function(err) {
+    if (err) {
+        console.log("error!! " + err)
+    } else {
+      //  console.log("MongoDB Connection Successful")
+    }
+})
 
 var Schema = mongoose.Schema;
 
@@ -43,18 +40,19 @@ var planetModel = mongoose.model('planets', dataSchema);
 
 
 
-app.post('/planet', async function(req, res) {
-    try {
-        const planetData = await planetModel.findOne({ id: req.body.id });
-        if (!planetData) {
-            return res.status(404).send("Planet not found. We only have 9 planets and a sun. Select a number from 0 - 9.");
+app.post('/planet',   function(req, res) {
+   // console.log("Received Planet ID " + req.body.id)
+    planetModel.findOne({
+        id: req.body.id
+    }, function(err, planetData) {
+        if (err) {
+            alert("Ooops, We only have 9 planets and a sun. Select a number from 0 - 9")
+            res.send("Error in Planet Data")
+        } else {
+            res.send(planetData);
         }
-        res.send(planetData);
-    } catch (err) {
-        console.error("Error fetching planet data:", err);
-        res.status(500).send("Internal Server Error");
-    }
-});
+    })
+})
 
 app.get('/',   async (req, res) => {
     res.sendFile(path.join(__dirname, '/', 'index.html'));
@@ -93,6 +91,7 @@ app.get('/ready',   function(req, res) {
     });
 })
 
+app.listen(3000, () => { console.log("Server successfully running on port - " +3000); })
 module.exports = app;
 
 //module.exports.handler = serverless(app)
