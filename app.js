@@ -18,13 +18,16 @@ mongoose.connect(process.env.MONGO_URI, {
     pass: process.env.MONGO_PASSWORD,
     useNewUrlParser: true,
     useUnifiedTopology: true
-}, function(err) {
-    if (err) {
-        console.log("error!! " + err)
-    } else {
-      //  console.log("MongoDB Connection Successful")
-    }
-})
+}).then(() => {
+    console.log("✅ MongoDB connection successful.");
+
+    app.listen(3000, () => {
+        console.log("🚀 Server successfully running on port 3000");
+    });
+}).catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1); // Exit if DB connection fails
+});
 
 var Schema = mongoose.Schema;
 
@@ -90,7 +93,6 @@ app.get('/ready',   function(req, res) {
     });
 })
 
-app.listen(3000, () => { console.log("Server successfully running on port - " +3000); })
 module.exports = app;
 
 //module.exports.handler = serverless(app)
