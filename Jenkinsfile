@@ -56,7 +56,26 @@ pipeline {
 
                         dependencyCheckPublisher failedTotalCritical: 1, pattern: 'dependency-check-report.xml', stopBuild: true
 
-                        junit allowEmptyResults: true, testResults: 'dependency-check-junit.xml'
+                        stage('Publish Dependency Check Report') {
+                            steps {
+                                echo '📊 Publishing OWASP Dependency Check report....'
+
+                                publishHTML(target: [
+                                    reportName: 'OWASP Dependency Check Report',
+                                    reportDir: '.',
+                                    reportFiles: 'dependency-check-report.html',
+                                    alwaysLinkToLastBuild: true,
+                                    keepAll: true,
+                                    allowMissing: false
+                                ])
+
+                                echo '📦 Archiving HTML report...'
+                                archiveArtifacts artifacts: 'dependency-check-report.html', fingerprint: true
+
+                                echo '🧪 Publishing JUnit results...'
+                                junit allowEmptyResults: true, testResults: 'dependency-check-junit.xml'
+                            }
+                        }
                     }
                 }
             }
