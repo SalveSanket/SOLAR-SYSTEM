@@ -74,13 +74,11 @@ pipeline {
         stage('unit test') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
-                    withEnv(["MONGO_URI=mongodb+srv://supercluster.d83jj.mongodb.net/superData"]) {
-                        echo '🧪 Running unit tests....'
-                        sh 'npm test'
-                        echo '🧪 Unit tests completed successfully!'
-                    }
+                    echo '🧪 Running unit tests....'
+                    sh 'npm test'
+                    echo '🧪 Unit tests completed successfully!'
                 }
-                junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
+                junit allowEmptyResults: true, stdioRetention: '',testResults: 'test-results.xml'
             }
         }
     }
