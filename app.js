@@ -16,15 +16,18 @@ app.use(cors())
 mongoose.connect(process.env.MONGO_URI, {
     user: process.env.MONGO_USERNAME,
     pass: process.env.MONGO_PASSWORD,
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}, function(err) {
-    if (err) {
-        console.log("error!! " + err)
-    } else {
-      //  console.log("MongoDB Connection Successful")
-    }
 })
+.then(() => {
+    console.log('✅ MongoDB Connected');
+
+    // Start server only after DB connects
+    app.listen(3000, () => {
+        console.log("🚀 Server running on port 3000");
+    });
+})
+.catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+});
 
 var Schema = mongoose.Schema;
 
