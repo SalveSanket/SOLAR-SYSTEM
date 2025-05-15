@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         NODE_ENV = 'production'
+        MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
+
     }
 
     tools {
@@ -60,11 +62,22 @@ pipeline {
                             failedTotalCritical: 1,
                             pattern: 'dependency-check-report.xml'
                         )
-                        
+
                         echo '📦 Archiving HTML report...'
                         publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'dependency-check-HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
                 }
+            }
+        }
+        
+        stage('unit test') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
+                    echo '🧪 Running unit tests....'
+                    sh 'npm test'
+                    echo '🧪 Unit tests completed successfully!'
+                }
+                junit allowEmptyResults: true, stdioRetention: '',testResults: 'test-results.xml'
             }
         }
     }
