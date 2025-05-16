@@ -27,6 +27,9 @@ pipeline {
         }
 
         stage('Install Dependencies') {
+            options {
+                timestamps()
+            }
             steps {
                 echo '🔧 Installing dependencies....'
                 sh 'npm install --no-audit'
@@ -36,6 +39,9 @@ pipeline {
         }
 
         stage('Dependency Check') {
+            options {
+                timestamps()
+            }
             parallel {
                 stage('NPM Dependency Audit') {
                     steps {
@@ -66,6 +72,9 @@ pipeline {
         }
         
         stage('unit test') {
+            options {
+                timestamps()
+            }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
                     echo '🧪 Running unit tests....'
