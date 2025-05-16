@@ -22,7 +22,7 @@
     "time-span": "^5.1.0"
   },
   "devDependencies": {
-    "chai": "*",
+    "chai": "^4.3.7",
     "chai-http": "*",
     "mocha": "*"
   }
