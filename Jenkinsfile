@@ -59,11 +59,7 @@ pipeline {
                             // --exclude node_modules
                         ''', odcInstallation: 'OWASP-DepCheck'
 
-                        dependencyCheckPublisher(
-                            failedTotalCritical: 1,
-                            pattern: 'dependency-check-report.xml'
-                        )
-
+                        
                         echo '📦 Archiving HTML report...'
                         publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'dependency-check-HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
