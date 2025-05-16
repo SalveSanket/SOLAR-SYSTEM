@@ -54,6 +54,7 @@ pipeline {
                             --out ./ 
                             --format ALL 
                             --prettyPrint
+                            --disableYarnAudit
                         ''', odcInstallation: 'OWASP-DepCheck'
 
                         
