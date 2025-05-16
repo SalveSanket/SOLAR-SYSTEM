@@ -90,6 +90,20 @@ pipeline {
                 junit allowEmptyResults: true, stdioRetention: '',testResults: 'test-results.xml'
             }
         }
+
+        stage('code coverage') {
+            options {
+                timestamps()
+                retry(2)
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
+                    echo '🧪 Running unit tests....'
+                    sh 'npm run coverage'
+                    echo '🧪 Unit tests completed successfully!'
+                }
+                junit allowEmptyResults: true, stdioRetention: '', testResults: 'coverage/lcov.info'}
+        }
     }
 
     post {
