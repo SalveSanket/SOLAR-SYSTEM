@@ -9,6 +9,13 @@ pipeline {
         MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
     }
 
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        disableresume()
+        ansiColor('xterm')
+    }
+
     stages {
         stage('Checkout Code') {
             steps {
@@ -74,6 +81,7 @@ pipeline {
         stage('unit test') {
             options {
                 timestamps()
+                retry(2)
             }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
