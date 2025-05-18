@@ -102,7 +102,9 @@ pipeline {
                     sh 'npm run coverage'
                     echo '🧪 Unit tests completed successfully!'
                 }
-                junit allowEmptyResults: true, stdioRetention: '', testResults: 'coverage/lcov.info'}
+
+                publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true, reportDir: 'coverage/lcov-result', reportFiles: 'index.html', reportName: 'Code Coverage Report', reportTitles: '', useWrapperFileDirectly: true])
+            }
         }
     }
 
