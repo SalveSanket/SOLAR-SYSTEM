@@ -70,9 +70,7 @@ pipeline {
 
                         
                         echo '📦 Archiving HTML report...'
-                        publishHTML([
-                            allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'dependency-check-HTML Report', reportTitles: '', useWrapperFileDirectly: true
-                            ])
+                        publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'dependency-check-HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
                 }
             }
@@ -100,14 +98,14 @@ pipeline {
             }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
-                    catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in feature releases', stageResult: 'UNSTABLE') {
+                    catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in feature releases', stageResult: 'UNSTABLE'){
                         echo '🧪 Running unit tests....'
                         sh 'npm run coverage'
                         echo '🧪 Unit tests completed successfully!'
                     }
                 }
 
-                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: '/ coverage / lcov-report /', reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true, reportDir: 'coverage/lcov-result', reportFiles: 'index.html', reportName: 'Code Coverage Report', reportTitles: '', useWrapperFileDirectly: true])
             }
         }
     }
