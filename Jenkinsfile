@@ -7,6 +7,7 @@ pipeline {
 
     environment {
         MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
+        SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
     }
 
     options {
@@ -90,6 +91,26 @@ pipeline {
                     catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in feature releases', stageResult: 'UNSTABLE') {
                         echo '📊 Running code coverage....'
                         sh 'npm run coverage'
+                        echo '📊 Code coverage completed!'
+                    }
+                }
+            }
+        }
+
+        stage('SAST - SonarQube') {
+            steps {
+                withCredentials([
+                    usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
+                ]) {
+                    catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in feature releases', stageResult: 'UNSTABLE') {
+                        echo '📊 Running code coverage....'
+                        sh '''
+                            $SONAR_SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.projectKey=Solar_System_project \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=http://54.80.43.181:9000 \
+                            -Dsonar.token=sqp_4bae06a986bdd2baa91fe36cf29b6e6fa4e172fa \        
+                        '''
                         echo '📊 Code coverage completed!'
                     }
                 }
