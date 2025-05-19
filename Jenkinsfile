@@ -32,9 +32,7 @@ pipeline {
         }
 
         stage('Install Dependencies') {
-            options {
-                timestamps()
-            }
+            options { timestamps() }
             steps {
                 echo '🔧 Installing dependencies....'
                 sh 'npm install --no-audit'
@@ -44,9 +42,7 @@ pipeline {
         }
 
         stage('Dependency Check') {
-            options {
-                timestamps()
-            }
+            options { timestamps() }
             parallel {
                 stage('NPM Dependency Audit') {
                     steps {
@@ -59,7 +55,6 @@ pipeline {
                 stage('OWASP Dependency Check') {
                     steps {
                         echo '🛡️ Running OWASP Dependency Check...'
-
                         dependencyCheck additionalArguments: '''
                             --scan ./
                             --out ./ 
@@ -67,54 +62,37 @@ pipeline {
                             --prettyPrint
                             --disableYarnAudit
                         ''', odcInstallation: 'OWASP-DepCheck'
-
-                        
-                        echo '📦 Archiving HTML report...'
-                        publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'dependency-check-HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
                 }
             }
         }
-        
+
         stage('unit test') {
-            options {
-                timestamps()
-                retry(2)
-            }
+            options { timestamps(); retry(2) }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
+                withCredentials([
+                    usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
+                ]) {
                     echo '🧪 Running unit tests....'
                     sh 'npm test'
                     echo '🧪 Unit tests completed successfully!'
                 }
-                junit allowEmptyResults: true, stdioRetention: '',testResults: 'test-results.xml'
+                junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
             }
         }
 
         stage('code coverage') {
-            options {
-                timestamps()
-                retry(2)
-            }
+            options { timestamps(); retry(2) }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
-                    catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in feature releases', stageResult: 'UNSTABLE'){
-                        echo '🧪 Running unit tests....'
+                withCredentials([
+                    usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
+                ]) {
+                    catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in feature releases', stageResult: 'UNSTABLE') {
+                        echo '📊 Running code coverage....'
                         sh 'npm run coverage'
-                        echo '🧪 Unit tests completed successfully!'
+                        echo '📊 Code coverage completed!'
                     }
                 }
-
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'coverage/lcov-report',
-                    reportFiles: 'index.html',
-                    reportName: 'Code Coverage Report',
-                    reportTitles: '',
-                    useWrapperFileDirectly: true
-                ])
             }
         }
     }
@@ -123,8 +101,34 @@ pipeline {
         success {
             echo '✅ Build completed successfully!'
         }
+
         failure {
             echo '❌ Build failed. Check the logs.'
+        }
+
+        always {
+            script {
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'coverage/lcov-report',
+                    reportFiles: 'index.html',
+                    reportName: 'Code Coverage Report',
+                    useWrapperFileDirectly: true
+                ])
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    icon: '',
+                    keepAll: true,
+                    reportDir: './',
+                    reportFiles: 'dependency-check-jenkins.html',
+                    reportName: 'dependency-check-HTML Report',
+                    useWrapperFileDirectly: true
+                ])
+                junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
+            }
         }
     }
 }
