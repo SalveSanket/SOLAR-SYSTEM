@@ -78,7 +78,7 @@ pipeline {
                     sh 'npm test'
                     echo '🧪 Unit tests completed successfully!'
                 }
-                junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
+                junit allowEmptyResults: true, testResults: 'test-results.xml'
             }
         }
 
@@ -88,7 +88,7 @@ pipeline {
                 withCredentials([
                     usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
                 ]) {
-                    catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in feature releases', stageResult: 'UNSTABLE') {
+                    catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in future releases', stageResult: 'UNSTABLE') {
                         echo '📊 Running code coverage....'
                         sh 'npm run coverage'
                         echo '📊 Code coverage completed!'
@@ -102,16 +102,16 @@ pipeline {
                 withCredentials([
                     usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
                 ]) {
-                    catchError(buildResult: 'SUCCESS', message: 'Oops! it will be fixed in feature releases', stageResult: 'UNSTABLE') {
-                        echo '📊 Running code coverage....'
+                    catchError(buildResult: 'SUCCESS', message: 'Oops! SonarQube analysis skipped due to issue.', stageResult: 'UNSTABLE') {
+                        echo '🔍 Running SonarQube analysis...'
                         sh '''
-                            $SONAR_SCANNER_HOME/bin/sonar-scanner \
+                            ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
                             -Dsonar.projectKey=Solar_System_project \
-                            -Dsonar.sources=app.js \
+                            -Dsonar.sources=. \
                             -Dsonar.host.url=http://54.80.43.181:9000 \
-                            -Dsonar.token=sqp_4bae06a986bdd2baa91fe36cf29b6e6fa4e172fa \        
+                            -Dsonar.login=sqp_4bae06a986bdd2baa91fe36cf29b6e6fa4e172fa
                         '''
-                        echo '📊 Code coverage completed!'
+                        echo '✅ SonarQube analysis completed!'
                     }
                 }
             }
@@ -138,6 +138,7 @@ pipeline {
                     reportName: 'Code Coverage Report',
                     useWrapperFileDirectly: true
                 ])
+
                 publishHTML([
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
@@ -148,7 +149,8 @@ pipeline {
                     reportName: 'dependency-check-HTML Report',
                     useWrapperFileDirectly: true
                 ])
-                junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
+
+                junit allowEmptyResults: true, testResults: 'test-results.xml'
             }
         }
     }
