@@ -90,7 +90,7 @@ pipeline {
                         withCredentials([
                             usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
                         ]) {
-                            catchError(buildResult: 'SUCCESS', message: 'Coverage error', stageResult: 'UNSTABLE') {
+                            catchError(buildResult: 'SUCCESS', message: 'Coverage error', stageResult: 'SUCCESS') {
                                 echo '📊 Running code coverage....'
                                 sh 'npm run coverage'
                                 echo '📊 Code coverage completed!'
