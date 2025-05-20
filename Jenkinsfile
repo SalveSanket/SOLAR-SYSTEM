@@ -102,22 +102,29 @@ pipeline {
                 stage('SAST - SonarQube') {
                     options { timestamps() }
                     steps {
-                        withCredentials([
-                            usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
-                        ]) {
-                            catchError(buildResult: 'SUCCESS', message: 'SonarQube analysis skipped', stageResult: 'UNSTABLE') {
-                                echo '🔍 Running SonarQube analysis...'
-                                sh '''
-                                    ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                                    -Dsonar.projectKey=Solar_System_project \
-                                    -Dsonar.sources=. \
-                                    -Dsonar.host.url=http://54.80.43.181:9000 \
-                                    -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
-                                    -Dsonar.login=sqp_4bae06a986bdd2baa91fe36cf29b6e6fa4e172fa
-                                '''
-                                echo '✅ SonarQube analysis completed!'
+                        timeout(time: 60, unit: 'SECONDS') {
+                            echo '🔍 Running SonarQube analysis....'
+                                withSonarQubeEnv('sonar-qube-server') {
+                                withCredentials([
+                                usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
+                                ]) {
+                                    catchError(buildResult: 'SUCCESS', message: 'SonarQube analysis skipped', stageResult: 'UNSTABLE') {
+                                        echo '🔍 Running SonarQube analysis...'
+                                        sh '''
+                                            ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                                            -Dsonar.projectKey=Solar_System_project \
+                                            -Dsonar.sources=app.js \
+                                            -Dsonar.host.url=http://54.80.43.181:9000 \
+                                            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                                        '''
+                                        echo '✅ SonarQube analysis completed!'
+                                    }
+                                    // ⬇️ Wait for quality gate result from SonarQube server
+                                    waitForQualityGate abortPipeline: true
+                                }
                             }
                         }
+                        
                     }
                 }
             }
@@ -157,7 +164,7 @@ pipeline {
                     useWrapperFileDirectly: true
                 ])
 
-                junit allowEmptyResults: true, testResults: 'test-results.xml'
+                junit(allowEmptyResults: true, testResults: 'test-results.xml')
             }
         }
     }
