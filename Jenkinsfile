@@ -136,16 +136,57 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                echo '🐳 Building Docker image....'
-                sh '''
-                    docker build -t indicationmark/solar-system-app:$GIT_COMMIT .
-                '''
-                echo '🐳 Docker image built successfully!'
+        stage('Build Docker Image and Venrablity Scan using Trivy') {
+            options { timestamps() }
+            parallel{
+                stage('Build Docker Image') {
+                    steps {
+                        echo '🐳 Building Docker image....'
+                        sh '''
+                            docker build -t indicationmark/solar-system-app:$GIT_COMMIT .
+                        '''
+                        echo '🐳 Docker image built successfully!'
+                    }
+                }
+                stage('Trivy Vulnerability Scan') {
+                    steps {
+                        echo '🔍 Running Trivy vulnerability scan....'
+                        sh '''
+                            trivy image indicationmark/solar-system-app:$GIT_COMMIT \
+                                --severity LOW,MEDIUM \
+                                --exit-code 0 \
+                                --quiet \
+                                --format json -o trivy-image-MEDIUM-results.json
+
+                            trivy image indicationmark/solar-system-app:$GIT_COMMIT \
+                                --severity CRITICAL \
+                                --exit-code 1 \
+                                --quiet \
+                                --format json -o trivy-image-CRITICAL-results.json
+                        '''
+                        echo '🔍 Trivy vulnerability scan completed!'
+                    }
+                    post{
+                        always {
+                            sh '''
+                                trivy convert \
+                                    --format template --template-path "@/usr/local/share/trivy/templates/html.tpl" \
+                                    --output trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json
+                                trivy convert \
+                                    --format template --template-path "@/usr/local/share/trivy/templates/html.tpl" \
+                                    --output trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json
+                                trivy convert \
+                                    --format template --template-path "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    --output trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json
+                                trivy convert \
+                                    --format template --template-path "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    --output trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json
+                            '''
+                        }
+                    }
+                }
             }
         }
-
     }
 
     post {
@@ -180,7 +221,29 @@ pipeline {
                     useWrapperFileDirectly: true
                 ])
 
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: './',
+                    reportFiles: 'trivy-image-MEDIUM-results.html',
+                    reportName: 'Trivy Image Medium Report',
+                    useWrapperFileDirectly: true
+                ])
+                
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: './',
+                    reportFiles: 'trivy-image-CRITICAL-results.html',
+                    reportName: 'Trivy Image Critical Report',
+                    useWrapperFileDirectly: true
+                ])
+
                 junit(allowEmptyResults: true, testResults: 'test-results.xml')
+                junit(allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml')
+                junit(allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml')
             }
         }
     }
