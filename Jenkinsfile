@@ -104,9 +104,9 @@ pipeline {
                     steps {
                         timeout(time: 60, unit: 'SECONDS') {
                             echo '🔍 Running SonarQube analysis....'
-                                withSonarQubeEnv('sonar-qube-server') {
+                            withSonarQubeEnv('sonar-qube-server') {
                                 withCredentials([
-                                usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
+                                    usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
                                 ]) {
                                     catchError(buildResult: 'SUCCESS', message: 'SonarQube analysis skipped', stageResult: 'UNSTABLE') {
                                         echo '🔍 Running SonarQube analysis...'
@@ -122,7 +122,6 @@ pipeline {
                                 }
                             }
                         }
-                        
                     }
                 }
             }
@@ -136,9 +135,9 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image and Venrablity Scan using Trivy') {
+        stage('Build Docker Image and Vulnerability Scan using Trivy') {
             options { timestamps() }
-            parallel{
+            parallel {
                 stage('Build Docker Image') {
                     steps {
                         echo '🐳 Building Docker image....'
@@ -170,23 +169,16 @@ pipeline {
                         always {
                             sh '''
                                 trivy convert \
-                                    --format template \
-                                    -t "@/usr/local/share/trivy/templates/html.tpl" \
+                                    --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
                                     -o trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json
-
                                 trivy convert \
-                                    --format template \
-                                    -t "@/usr/local/share/trivy/templates/html.tpl" \
+                                    --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
                                     -o trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json
-
                                 trivy convert \
-                                    --format template \
-                                    -t "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
                                     -o trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json
-
                                 trivy convert \
-                                    --format template \
-                                    -t "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
                                     -o trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json
                             '''
                         }
