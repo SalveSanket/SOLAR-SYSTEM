@@ -136,6 +136,16 @@ pipeline {
             }
         }
 
+        stage('Build Docker Image') {
+            steps {
+                echo '🐳 Building Docker image....'
+                sh '''
+                    docker build -t indicationmark/solar-system-app:$GIT_COMMIT .
+                '''
+                echo '🐳 Docker image built successfully!'
+            }
+        }
+
     }
 
     post {
