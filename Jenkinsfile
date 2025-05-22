@@ -89,7 +89,7 @@ pipeline {
                         withCredentials([
                             usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
                         ]) {
-                            catchError(buildResult: 'SUCCESS', message: 'Coverage error', stageResult: 'UNSTABLE') {
+                            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                                 echo '📊 Running code coverage....'
                                 sh 'npm run coverage'
                                 echo '📊 Code coverage completed!'
@@ -102,17 +102,16 @@ pipeline {
                     steps {
                         timeout(time: 60, unit: 'SECONDS') {
                             withSonarQubeEnv('sonar-qube-server') {
-                                    catchError(buildResult: 'SUCCESS', message: 'SonarQube analysis skipped', stageResult: 'UNSTABLE') {
-                                        echo '🔍 Running SonarQube analysis...'
-                                        sh '''
-                                            ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                                            -Dsonar.projectKey=Solar_System-Project \
-                                            -Dsonar.sources=app.js \
-                                            -Dsonar.host.url=http://98.81.130.171:9000 \
-                                            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                                        '''
-                                        echo '✅ SonarQube analysis completed!'
-                                    }
+                                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                                    echo '🔍 Running SonarQube analysis...'
+                                    sh '''
+                                        ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                                        -Dsonar.projectKey=Solar_System-Project \
+                                        -Dsonar.sources=app.js \
+                                        -Dsonar.host.url=http://98.81.130.171:9000 \
+                                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                                    '''
+                                    echo '✅ SonarQube analysis completed!'
                                 }
                             }
                         }
@@ -137,9 +136,7 @@ pipeline {
                 stage('Build Docker Image') {
                     steps {
                         echo '🐳 Building Docker image....'
-                        sh '''
-                            docker build -t indicationmark/solar-system-app:$GIT_COMMIT .
-                        '''
+                        sh 'docker build -t indicationmark/solar-system-app:$GIT_COMMIT .'
                         echo '🐳 Docker image built successfully!'
                     }
                 }
