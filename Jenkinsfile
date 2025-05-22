@@ -7,7 +7,7 @@ pipeline {
 
     environment {
         MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
-        SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610' // ⚠️ Make sure this tool is configured in Jenkins
+        SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
     }
 
     options {
@@ -196,52 +196,50 @@ pipeline {
         }
 
         always {
-            node {
-                script {
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'coverage/lcov-report',
-                        reportFiles: 'index.html',
-                        reportName: 'Code Coverage Report',
-                        useWrapperFileDirectly: true
-                    ])
+            script {
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'coverage/lcov-report',
+                    reportFiles: 'index.html',
+                    reportName: 'Code Coverage Report',
+                    useWrapperFileDirectly: true
+                ])
 
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: './',
-                        reportFiles: 'dependency-check-jenkins.html',
-                        reportName: 'Dependency Check Report',
-                        useWrapperFileDirectly: true
-                    ])
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: './',
+                    reportFiles: 'dependency-check-jenkins.html',
+                    reportName: 'Dependency Check Report',
+                    useWrapperFileDirectly: true
+                ])
 
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: './',
-                        reportFiles: 'trivy-image-MEDIUM-results.html',
-                        reportName: 'Trivy Image Medium Report',
-                        useWrapperFileDirectly: true
-                    ])
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: './',
+                    reportFiles: 'trivy-image-MEDIUM-results.html',
+                    reportName: 'Trivy Image Medium Report',
+                    useWrapperFileDirectly: true
+                ])
 
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: './',
-                        reportFiles: 'trivy-image-CRITICAL-results.html',
-                        reportName: 'Trivy Image Critical Report',
-                        useWrapperFileDirectly: true
-                    ])
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: './',
+                    reportFiles: 'trivy-image-CRITICAL-results.html',
+                    reportName: 'Trivy Image Critical Report',
+                    useWrapperFileDirectly: true
+                ])
 
-                    junit allowEmptyResults: true, testResults: 'test-results.xml'
-                    junit allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml'
-                    junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
-                }
+                junit allowEmptyResults: true, testResults: 'test-results.xml'
+                junit allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml'
+                junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
             }
         }
     }
