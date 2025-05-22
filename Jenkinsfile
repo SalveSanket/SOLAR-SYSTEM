@@ -109,9 +109,8 @@ pipeline {
                                         echo '🔍 Running SonarQube analysis...'
                                         sh '''
                                             ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                                            -Dsonar.projectKey=Solar_System_project \
+                                            -Dsonar.projectKey=Solar_System-project \
                                             -Dsonar.sources=app.js \
-                                            -Dsonar.exclusions=node_modules/** \
                                             -Dsonar.host.url=http://98.81.130.171:9000 \
                                             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                                         '''
