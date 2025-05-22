@@ -7,7 +7,7 @@ pipeline {
 
     environment {
         MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
-        SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
+        SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610' // ⚠️ Make sure this tool is configured in Jenkins
     }
 
     options {
@@ -147,6 +147,7 @@ pipeline {
                         echo '🐳 Docker image built successfully!'
                     }
                 }
+
                 stage('Trivy Vulnerability Scan') {
                     steps {
                         echo '🔍 Running Trivy vulnerability scan....'
@@ -165,21 +166,18 @@ pipeline {
                         '''
                         echo '🔍 Trivy vulnerability scan completed!'
                     }
+
                     post {
                         always {
                             sh '''
-                                trivy convert \
-                                    --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
-                                    -o trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json
-                                trivy convert \
-                                    --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
-                                    -o trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json
-                                trivy convert \
-                                    --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
-                                    -o trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json
-                                trivy convert \
-                                    --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
-                                    -o trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json
+                                trivy convert --format template --template "@/usr/local/share/trivy/templates/html.tpl" \
+                                    --output trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json
+                                trivy convert --format template --template "@/usr/local/share/trivy/templates/html.tpl" \
+                                    --output trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json
+                                trivy convert --format template --template "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    --output trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json
+                                trivy convert --format template --template "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    --output trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json
                             '''
                         }
                     }
@@ -198,51 +196,52 @@ pipeline {
         }
 
         always {
-            script {
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'coverage/lcov-report',
-                    reportFiles: 'index.html',
-                    reportName: 'Code Coverage Report',
-                    useWrapperFileDirectly: true
-                ])
+            node {
+                script {
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'coverage/lcov-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Code Coverage Report',
+                        useWrapperFileDirectly: true
+                    ])
 
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    icon: '',
-                    keepAll: true,
-                    reportDir: './',
-                    reportFiles: 'dependency-check-jenkins.html',
-                    reportName: 'dependency-check-HTML Report',
-                    useWrapperFileDirectly: true
-                ])
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: './',
+                        reportFiles: 'dependency-check-jenkins.html',
+                        reportName: 'Dependency Check Report',
+                        useWrapperFileDirectly: true
+                    ])
 
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: './',
-                    reportFiles: 'trivy-image-MEDIUM-results.html',
-                    reportName: 'Trivy Image Medium Report',
-                    useWrapperFileDirectly: true
-                ])
-                
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: './',
-                    reportFiles: 'trivy-image-CRITICAL-results.html',
-                    reportName: 'Trivy Image Critical Report',
-                    useWrapperFileDirectly: true
-                ])
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: './',
+                        reportFiles: 'trivy-image-MEDIUM-results.html',
+                        reportName: 'Trivy Image Medium Report',
+                        useWrapperFileDirectly: true
+                    ])
 
-                junit(allowEmptyResults: true, testResults: 'test-results.xml')
-                junit(allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml')
-                junit(allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml')
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: './',
+                        reportFiles: 'trivy-image-CRITICAL-results.html',
+                        reportName: 'Trivy Image Critical Report',
+                        useWrapperFileDirectly: true
+                    ])
+
+                    junit allowEmptyResults: true, testResults: 'test-results.xml'
+                    junit allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml'
+                    junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
+                }
             }
         }
     }
