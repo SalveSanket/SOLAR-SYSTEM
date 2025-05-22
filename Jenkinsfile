@@ -102,14 +102,11 @@ pipeline {
                     steps {
                         timeout(time: 60, unit: 'SECONDS') {
                             withSonarQubeEnv('sonar-qube-server') {
-                                withCredentials([
-                                    usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
-                                ]) {
                                     catchError(buildResult: 'SUCCESS', message: 'SonarQube analysis skipped', stageResult: 'UNSTABLE') {
                                         echo '🔍 Running SonarQube analysis...'
                                         sh '''
                                             ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                                            -Dsonar.projectKey=Solar_System-project \
+                                            -Dsonar.projectKey=Solar_System-Project \
                                             -Dsonar.sources=app.js \
                                             -Dsonar.host.url=http://98.81.130.171:9000 \
                                             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
