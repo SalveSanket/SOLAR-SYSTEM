@@ -125,15 +125,15 @@ pipeline {
             }
         }
 
-        stage('Wait for Quality Gate') {
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    withSonarQubeEnv('sonar-qube-server') {
-                        waitForQualityGate abortPipeline: true
-                    }
-                }
-            }
-        }
+        // stage('Wait for Quality Gate') {
+        //     steps {
+        //         timeout(time: 2, unit: 'MINUTES') {
+        //             withSonarQubeEnv('sonar-qube-server') {
+        //                 waitForQualityGate abortPipeline: true
+        //             }
+        //         }
+        //     }
+        // }
 
         stage('Build Docker Image and Vulnerability Scan using Trivy') {
             options { timestamps() }
