@@ -112,7 +112,7 @@ pipeline {
                                             -Dsonar.projectKey=Solar_System_project \
                                             -Dsonar.sources=app.js \
                                             -Dsonar.exclusions=node_modules/** \
-                                            -Dsonar.host.url=http://192.168.64.5:9000 \
+                                            -Dsonar.host.url=http://98.81.130.171:9000 \
                                             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                                         '''
                                         echo '✅ SonarQube analysis completed!'
@@ -125,15 +125,15 @@ pipeline {
             }
         }
 
-        // stage('Wait for Quality Gate') {
-        //     steps {
-        //         timeout(time: 2, unit: 'MINUTES') {
-        //             withSonarQubeEnv('sonar-qube-server') {
-        //                 waitForQualityGate abortPipeline: true
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Wait for Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    withSonarQubeEnv('sonar-qube-server') {
+                        waitForQualityGate abortPipeline: true
+                    }
+                }
+            }
+        }
 
         stage('Build Docker Image and Vulnerability Scan using Trivy') {
             options { timestamps() }
