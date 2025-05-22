@@ -68,7 +68,7 @@ pipeline {
             }
         }
 
-        stage('unit test') {
+        stage('Unit Test') {
             options { timestamps(); retry(2) }
             steps {
                 withCredentials([
@@ -81,7 +81,7 @@ pipeline {
             }
         }
 
-        stage('code coverage & analysis') {
+        stage('Code Coverage & Static Analysis') {
             options { timestamps() }
             parallel {
                 stage('Code Coverage') {
@@ -89,7 +89,7 @@ pipeline {
                         withCredentials([
                             usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
                         ]) {
-                            catchError(buildResult: 'SUCCESS', message: 'Coverage error', stageResult: 'SUCCESS') {
+                            catchError(buildResult: 'SUCCESS', message: 'Coverage error', stageResult: 'UNSTABLE') {
                                 echo '📊 Running code coverage....'
                                 sh 'npm run coverage'
                                 echo '📊 Code coverage completed!'
@@ -99,10 +99,8 @@ pipeline {
                 }
 
                 stage('SAST - SonarQube') {
-                    options { timestamps() }
                     steps {
                         timeout(time: 60, unit: 'SECONDS') {
-                            echo '🔍 Running SonarQube analysis....'
                             withSonarQubeEnv('sonar-qube-server') {
                                 withCredentials([
                                     usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
@@ -113,6 +111,7 @@ pipeline {
                                             ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
                                             -Dsonar.projectKey=Solar_System_project \
                                             -Dsonar.sources=app.js \
+                                            -Dsonar.exclusions=node_modules/** \
                                             -Dsonar.host.url=http://192.168.64.5:9000 \
                                             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                                         '''
@@ -129,7 +128,9 @@ pipeline {
         stage('Wait for Quality Gate') {
             steps {
                 timeout(time: 2, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                    withSonarQubeEnv('sonar-qube-server') {
+                        waitForQualityGate abortPipeline: true
+                    }
                 }
             }
         }
@@ -146,6 +147,7 @@ pipeline {
                         echo '🐳 Docker image built successfully!'
                     }
                 }
+
                 stage('Trivy Vulnerability Scan') {
                     steps {
                         echo '🔍 Running Trivy vulnerability scan....'
@@ -164,21 +166,18 @@ pipeline {
                         '''
                         echo '🔍 Trivy vulnerability scan completed!'
                     }
+
                     post {
                         always {
                             sh '''
-                                trivy convert \
-                                    --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
-                                    -o trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json
-                                trivy convert \
-                                    --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
-                                    -o trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json
-                                trivy convert \
-                                    --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
-                                    -o trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json
-                                trivy convert \
-                                    --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
-                                    -o trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json
+                                trivy convert --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
+                                    -o trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json || echo "Conversion failed"
+                                trivy convert --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
+                                    -o trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json || echo "Conversion failed"
+                                trivy convert --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    -o trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json || echo "Conversion failed"
+                                trivy convert --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    -o trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json || echo "Conversion failed"
                             '''
                         }
                     }
@@ -211,11 +210,10 @@ pipeline {
                 publishHTML([
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
-                    icon: '',
                     keepAll: true,
                     reportDir: './',
                     reportFiles: 'dependency-check-jenkins.html',
-                    reportName: 'dependency-check-HTML Report',
+                    reportName: 'Dependency Check Report',
                     useWrapperFileDirectly: true
                 ])
 
@@ -225,25 +223,23 @@ pipeline {
                     keepAll: true,
                     reportDir: './',
                     reportFiles: 'trivy-image-MEDIUM-results.html',
-                    reportName: 'Trivy Image Medium Report',
+                    reportName: 'Trivy Medium Report',
                     useWrapperFileDirectly: true
                 ])
-                
+
                 publishHTML([
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
                     reportDir: './',
                     reportFiles: 'trivy-image-CRITICAL-results.html',
-                    reportName: 'Trivy Image Critical Report',
+                    reportName: 'Trivy Critical Report',
                     useWrapperFileDirectly: true
                 ])
 
-                junit(allowEmptyResults: true, testResults: 'test-results.xml')
-                junit(allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml')
-                junit(allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml')
                 junit allowEmptyResults: true, testResults: 'test-results.xml'
-
+                junit allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml'
+                junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
             }
         }
     }
