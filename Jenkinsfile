@@ -147,7 +147,6 @@ pipeline {
                         echo '🐳 Docker image built successfully!'
                     }
                 }
-
                 stage('Trivy Vulnerability Scan') {
                     steps {
                         echo '🔍 Running Trivy vulnerability scan....'
@@ -166,18 +165,21 @@ pipeline {
                         '''
                         echo '🔍 Trivy vulnerability scan completed!'
                     }
-
                     post {
                         always {
                             sh '''
-                                trivy convert --format template --template "@/usr/local/share/trivy/templates/html.tpl" \
-                                    --output trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json
-                                trivy convert --format template --template "@/usr/local/share/trivy/templates/html.tpl" \
-                                    --output trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json
-                                trivy convert --format template --template "@/usr/local/share/trivy/templates/junit.tpl" \
-                                    --output trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json
-                                trivy convert --format template --template "@/usr/local/share/trivy/templates/junit.tpl" \
-                                    --output trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json
+                                trivy convert \
+                                    --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
+                                    -o trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json
+                                trivy convert \
+                                    --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
+                                    -o trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json
+                                trivy convert \
+                                    --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    -o trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json
+                                trivy convert \
+                                    --format template -t "@/usr/local/share/trivy/templates/junit.tpl" \
+                                    -o trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json
                             '''
                         }
                     }
@@ -210,10 +212,11 @@ pipeline {
                 publishHTML([
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
+                    icon: '',
                     keepAll: true,
                     reportDir: './',
                     reportFiles: 'dependency-check-jenkins.html',
-                    reportName: 'Dependency Check Report',
+                    reportName: 'dependency-check-HTML Report',
                     useWrapperFileDirectly: true
                 ])
 
@@ -226,7 +229,7 @@ pipeline {
                     reportName: 'Trivy Image Medium Report',
                     useWrapperFileDirectly: true
                 ])
-
+                
                 publishHTML([
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
@@ -237,9 +240,9 @@ pipeline {
                     useWrapperFileDirectly: true
                 ])
 
-                junit allowEmptyResults: true, testResults: 'test-results.xml'
-                junit allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml'
-                junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
+                junit(allowEmptyResults: true, testResults: 'test-results.xml')
+                junit(allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml')
+                junit(allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml')
             }
         }
     }
