@@ -113,7 +113,7 @@ pipeline {
                                             ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
                                             -Dsonar.projectKey=Solar_System_project \
                                             -Dsonar.sources=app.js \
-                                            -Dsonar.host.url=http://54.80.43.181:9000 \
+                                            -Dsonar.host.url=http://192.168.64.5:9000 \
                                             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                                         '''
                                         echo '✅ SonarQube analysis completed!'
