@@ -78,7 +78,6 @@ pipeline {
                     sh 'npm test'
                     echo '🧪 Unit tests completed successfully!'
                 }
-                junit allowEmptyResults: true, testResults: 'test-results.xml'
             }
         }
 
@@ -243,6 +242,8 @@ pipeline {
                 junit(allowEmptyResults: true, testResults: 'test-results.xml')
                 junit(allowEmptyResults: true, testResults: 'trivy-image-MEDIUM-results.xml')
                 junit(allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml')
+                junit allowEmptyResults: true, testResults: 'test-results.xml'
+
             }
         }
     }
