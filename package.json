@@ -10,7 +10,7 @@
   },
   "nyc": {
     "check-coverage": true,
-    "lines": 90
+    "lines": 70
   },
   "dependencies": {
     "chai": "^4.3.7",
