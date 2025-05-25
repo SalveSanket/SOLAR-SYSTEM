@@ -115,8 +115,19 @@ pipeline {
         stage('Build Docker Image') {
             options { timestamps() }
             steps {
-                echo '🐳 Building Docker image....'
-                sh 'docker build -t indicationmark/solar-system-app:$GIT_COMMIT .'
+                echo '🐳 Cleaning up old Docker images and building new one for linux/amd64 platform....'
+                sh '''
+                    # Remove all old Docker images
+                    docker rmi -f $(docker images -q) || true
+
+                    # Ensure Buildx is available and used
+                    docker buildx create --use || true
+
+                    # Build new image for linux/amd64
+                    docker buildx build --platform linux/amd64 \
+                        -t indicationmark/solar-system-app:$GIT_COMMIT \
+                        --load .
+                '''
             }
         }
 
