@@ -8,11 +8,8 @@ pipeline {
     environment {
         MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
         SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
-        MONGO_USERNAME = credentials('mongo-db-credentials').username
-        MONGO_PASSWORD = credentials('mongo-db-credentials').password
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
-        AWS_SSH_KEY = credentials('AWS_Deployment-Server_SSH-Key')
-        AWS_EC2_HOST = 'ubuntu@3.80.187.198'
+        AWS_EC2_HOST = '3.80.187.198'
     }
 
     options {
@@ -128,7 +125,6 @@ pipeline {
             steps {
                 echo '🔍 Running Trivy vulnerability scan....'
                 script {
-                    // Run Trivy with status capture to avoid failing the build
                     def exitCode = sh(script: '''
                         trivy image indicationmark/solar-system-app:$GIT_COMMIT \
                             --severity CRITICAL \
@@ -143,9 +139,7 @@ pipeline {
                             --exit-code 0 \
                             --quiet \
                             --format json -o trivy-image-MEDIUM-results.json
-                    '''
 
-                    sh '''
                         trivy convert --format template -t "@/usr/local/share/trivy/templates/html.tpl" \
                             -o trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json || echo "Conversion failed"
 
@@ -173,9 +167,7 @@ pipeline {
             steps {
                 echo '🚀 Pushing Docker image to Docker Hub....'
                 withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
-                    sh '''
-                        docker push indicationmark/solar-system-app:$GIT_COMMIT
-                    '''
+                    sh 'docker push indicationmark/solar-system-app:$GIT_COMMIT'
                     echo '✅ Docker image pushed successfully!'
                 }
             }
@@ -184,30 +176,30 @@ pipeline {
         stage('Deploy to AWS EC2') {
             options { timestamps() }
             steps {
-                script {
-                    echo '🌐 Deploying to AWS EC2....'
+                withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')]) {
                     sshagent(['AWS_Deployment-Server_SSH-Key']) {
-                            ssh -o StrictHostKeyChecking=no -i "${AWS_EC2_HOST}" "
+                        sh '''
+                            ssh -o StrictHostKeyChecking=no ubuntu@3.80.187.198 << 'EOF'
                                 if sudo docker ps -a | grep -q solar-system-app; then
                                     echo '🛑 Stopping existing container...'
                                     sudo docker stop solar-system-app
                                     sudo docker rm solar-system-app
-                                    echo '🗑️ Existing container removed.'
                                 fi
-                                    sudo docker run -d --name solar-system-app \
-                                    -e MONGO_URI=${MONGO_URI} \
-                                    -e MONGO_USERNAME=${MONGO_USERNAME} \
-                                    -e MONGO_PASSWORD=${MONGO_PASSWORD} \
+                                echo '🚀 Starting new container...'
+                                sudo docker run -d --name solar-system-app \
+                                    -e MONGO_URI="mongodb+srv://supercluster.d83jj.mongodb.net/superData" \
+                                    -e MONGO_USERNAME="$MONGO_USERNAME" \
+                                    -e MONGO_PASSWORD="$MONGO_PASSWORD" \
                                     -p 3000:3000 \
                                     indicationmark/solar-system-app:$GIT_COMMIT
-                                echo '🚀 New container started successfully!'
-                            "
-                            echo '✅ Deployment to AWS EC2 completed successfully!'
-                        }
+                            EOF
+                        '''
+                        echo '✅ Deployment to AWS EC2 completed successfully!'
                     }
                 }
             }
         }
+    }
 
     post {
         always {
