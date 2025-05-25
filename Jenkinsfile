@@ -211,6 +211,19 @@ pipeline {
                 }
             }
         }
+
+        stage('Integration Testing') {
+            options { timestamps() }
+            steps {
+                withAWS(credentials: 'AWS Jenkins Credentials',region: 'us-east-1') {
+                    echo '🧪 Running Integration Test...'
+                    sh '''
+                        chmod +x integrationTesting.sh
+                        ./integrationTesting.sh
+                    '''
+                }
+            }
+        }
     }
 
     post {
