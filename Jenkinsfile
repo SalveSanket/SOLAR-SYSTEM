@@ -9,7 +9,7 @@ pipeline {
         MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
         SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
-        AWS_EC2_HOST = '3.80.187.198'
+        AWS_EC2_HOST = '3.80.187.198' // Only the IP, not used as -i
     }
 
     options {
@@ -168,7 +168,6 @@ pipeline {
                 echo '🚀 Pushing Docker image to Docker Hub....'
                 withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
                     sh 'docker push indicationmark/solar-system-app:$GIT_COMMIT'
-                    echo '✅ Docker image pushed successfully!'
                 }
             }
         }
@@ -176,26 +175,28 @@ pipeline {
         stage('Deploy to AWS EC2') {
             options { timestamps() }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')]) {
-                    sshagent(['AWS_Deployment-Server_SSH-Key']) {
-                        sh '''
-                            ssh -o StrictHostKeyChecking=no ubuntu@3.80.187.198 << 'EOF'
-                                if sudo docker ps -a | grep -q solar-system-app; then
-                                    echo '🛑 Stopping existing container...'
-                                    sudo docker stop solar-system-app
-                                    sudo docker rm solar-system-app
-                                fi
-                                echo '🚀 Starting new container...'
-                                sudo docker run -d --name solar-system-app \
-                                    -e MONGO_URI="mongodb+srv://supercluster.d83jj.mongodb.net/superData" \
-                                    -e MONGO_USERNAME="$MONGO_USERNAME" \
-                                    -e MONGO_PASSWORD="$MONGO_PASSWORD" \
-                                    -p 3000:3000 \
-                                    indicationmark/solar-system-app:$GIT_COMMIT
-                            EOF
-                        '''
-                        echo '✅ Deployment to AWS EC2 completed successfully!'
-                    }
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'AWS_Deployment-Server_SSH-Key', keyFileVariable: 'EC2_KEY'),
+                    usernamePassword(credentialsId: 'mongo-db-credentials', usernameVariable: 'MONGO_USERNAME', passwordVariable: 'MONGO_PASSWORD')
+                ]) {
+                    echo '🌐 Deploying to AWS EC2....'
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i \$EC2_KEY ubuntu@${AWS_EC2_HOST} <<EOF
+                        if sudo docker ps -a | grep -q solar-system-app; then
+                            echo '🛑 Stopping existing container...'
+                            sudo docker stop solar-system-app
+                            sudo docker rm solar-system-app
+                            echo '🗑️ Existing container removed.'
+                        fi
+                        sudo docker run -d --name solar-system-app \\
+                            -e MONGO_URI=${MONGO_URI} \\
+                            -e MONGO_USERNAME=\$MONGO_USERNAME \\
+                            -e MONGO_PASSWORD=\$MONGO_PASSWORD \\
+                            -p 3000:3000 \\
+                            indicationmark/solar-system-app:$GIT_COMMIT
+                        echo '🚀 New container started successfully!'
+                        EOF
+                    """
                 }
             }
         }
@@ -203,7 +204,7 @@ pipeline {
 
     post {
         always {
-            script {
+            node {
                 publishHTML([
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
