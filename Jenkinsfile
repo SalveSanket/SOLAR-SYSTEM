@@ -9,7 +9,7 @@ pipeline {
         MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
         SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
-        AWS_EC2_HOST = '3.80.187.198' // Only the IP, not used as -i
+        AWS_EC2_HOST = '3.80.187.198'
     }
 
     options {
@@ -181,21 +181,21 @@ pipeline {
                 ]) {
                     echo '🌐 Deploying to AWS EC2....'
                     sh """
-                        ssh -o StrictHostKeyChecking=no -i \$EC2_KEY ubuntu@${AWS_EC2_HOST} <<EOF
-                        if sudo docker ps -a | grep -q solar-system-app; then
-                            echo '🛑 Stopping existing container...'
-                            sudo docker stop solar-system-app
-                            sudo docker rm solar-system-app
-                            echo '🗑️ Existing container removed.'
-                        fi
-                        sudo docker run -d --name solar-system-app \\
-                            -e MONGO_URI=${MONGO_URI} \\
-                            -e MONGO_USERNAME=\$MONGO_USERNAME \\
-                            -e MONGO_PASSWORD=\$MONGO_PASSWORD \\
-                            -p 3000:3000 \\
-                            indicationmark/solar-system-app:$GIT_COMMIT
-                        echo '🚀 New container started successfully!'
-                        EOF
+                        ssh -o StrictHostKeyChecking=no -i \$EC2_KEY ubuntu@${AWS_EC2_HOST} '
+                            if sudo docker ps -a | grep -q solar-system-app; then
+                                echo "🛑 Stopping existing container..."
+                                sudo docker stop solar-system-app
+                                sudo docker rm solar-system-app
+                                echo "🗑️ Existing container removed."
+                            fi
+                            sudo docker run -d --name solar-system-app \\
+                                -e MONGO_URI=${MONGO_URI} \\
+                                -e MONGO_USERNAME=\$MONGO_USERNAME \\
+                                -e MONGO_PASSWORD=\$MONGO_PASSWORD \\
+                                -p 3000:3000 \\
+                                indicationmark/solar-system-app:$GIT_COMMIT
+                            echo "🚀 New container started successfully!"
+                        '
                     """
                 }
             }
@@ -204,48 +204,42 @@ pipeline {
 
     post {
         always {
-            node {
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'coverage/lcov-report',
-                    reportFiles: 'index.html',
-                    reportName: 'Code Coverage Report'
-                ])
-
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: './',
-                    reportFiles: 'dependency-check-jenkins.html',
-                    reportName: 'Dependency Check Report'
-                ])
-
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: './',
-                    reportFiles: 'trivy-image-MEDIUM-results.html',
-                    reportName: 'Trivy Medium Report'
-                ])
-
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: './',
-                    reportFiles: 'trivy-image-CRITICAL-results.html',
-                    reportName: 'Trivy Critical Report'
-                ])
-
-                catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
-                    echo '📦 Archiving artifacts....'
-                    junit allowEmptyResults: true, testResults: 'test-results.xml'
-                    junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
-                }
+            publishHTML([
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'coverage/lcov-report',
+                reportFiles: 'index.html',
+                reportName: 'Code Coverage Report'
+            ])
+            publishHTML([
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: './',
+                reportFiles: 'dependency-check-jenkins.html',
+                reportName: 'Dependency Check Report'
+            ])
+            publishHTML([
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: './',
+                reportFiles: 'trivy-image-MEDIUM-results.html',
+                reportName: 'Trivy Medium Report'
+            ])
+            publishHTML([
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: './',
+                reportFiles: 'trivy-image-CRITICAL-results.html',
+                reportName: 'Trivy Critical Report'
+            ])
+            catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                echo '📦 Archiving artifacts....'
+                junit allowEmptyResults: true, testResults: 'test-results.xml'
+                junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
             }
         }
 
