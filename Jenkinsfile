@@ -215,12 +215,30 @@ pipeline {
         stage('Integration Testing') {
             options { timestamps() }
             steps {
-                withAWS(credentials: 'AWS Jenkins Credentials',region: 'us-east-1') {
-                    echo '🧪 Running Integration Test...'
-                    sh '''
-                        chmod +x integrationTesting.sh
-                        ./integrationTesting.sh
-                    '''
+                withAWS(credentials: 'AWS Jenkins Credentials', region: 'us-east-1') {
+                    script {
+                        // These echo lines will be visible in the pipeline console log, making steps clear
+                        sh '''
+                            echo "\\033[1;34m[Step 1/3] Checking for AWS CLI...\\033[0m"
+                            if ! command -v aws >/dev/null 2>&1 || [ "$(aws --version 2>&1 | grep -o 'aws-cli/2')" != "aws-cli/2" ]; then
+                                echo "\\033[1;33mAWS CLI v2 not found. Installing...\\033[0m"
+                                rm -rf /tmp/awscliv2.zip /tmp/aws
+                                curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+                                unzip -q /tmp/awscliv2.zip -d /tmp
+                                sudo /tmp/aws/install --update
+                                rm -rf /tmp/awscliv2.zip /tmp/aws
+                                echo "\\033[1;32mAWS CLI v2 installed!\\033[0m"
+                            else
+                                echo "\\033[1;32mAWS CLI v2 is already installed: $(aws --version)\\033[0m"
+                            fi
+
+                            echo "\\033[1;34m[Step 2/3] Setting integrationTesting.sh as executable...\\033[0m"
+                            chmod +x integrationTesting.sh
+
+                            echo "\\033[1;34m[Step 3/3] Running integrationTesting.sh...\\033[0m"
+                            ./integrationTesting.sh
+                        '''
+                    }
                 }
             }
         }
