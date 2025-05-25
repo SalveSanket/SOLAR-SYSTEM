@@ -20,7 +20,7 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => {
     console.log('✅ MongoDB Connected');
     // Start server only after DB connects
-    app.listen(3000, () => {
+    app.listen(3000, '0.0.0.0', () => {
         console.log("🚀 Server running on port 3000");
     });
 })
