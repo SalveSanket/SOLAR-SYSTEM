@@ -19,7 +19,7 @@ pipeline {
 
     stages {
         stage('Checkout Code') {
-            options { timestamps() , retry(3) }
+            options { timestamps(); retry(3) }
             steps {
                 echo '📥 Checking out code....'
                 checkout scm
