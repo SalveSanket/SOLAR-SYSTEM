@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        MONGO_URI = "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
+        MONGO_URI = "mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@supercluster.d83jj.mongodb.net/superData" \
         SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
         AWS_EC2_HOST = '54.88.49.201'
