@@ -200,10 +200,8 @@ pipeline {
                                 sudo docker rm solar-system-app
                                 echo "🗑️ Existing container removed."
                             fi
-
-                            export MONGO_URI="mongodb+srv://\$MONGO_USERNAME:\$MONGO_PASSWORD@supercluster.d83jj.mongodb.net/superData"
-
                             sudo docker run -d --name solar-system-app \\
+                                -e MONGO_URI="mongodb+srv://$MONGO_USERNAME:$MONGO_PASSWORD@supercluster.d83jj.mongodb.net/superData" \
                                 -e MONGO_URI=${MONGO_URI} \\
                                 -e MONGO_USERNAME=\$MONGO_USERNAME \\
                                 -e MONGO_PASSWORD=\$MONGO_PASSWORD \\
