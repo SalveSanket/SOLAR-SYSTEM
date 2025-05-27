@@ -26,13 +26,6 @@ pipeline {
             }
         }
 
-        stage('Seed Database') {
-            steps {
-                echo '🌱 Seeding database before tests...'
-                sh 'node seed.js'
-            }
-        }
-
         stage('VM Node Version') {
             steps {
                 sh '''
@@ -71,6 +64,12 @@ pipeline {
                             --prettyPrint
                             --disableYarnAudit
                         ''', odcInstallation: 'OWASP-DepCheck'
+                    }
+                }
+                stage('Seed Database') {
+                    steps {
+                        echo '🌱 Seeding database before tests...'
+                        sh 'node seed.js'
                     }
                 }
             }
