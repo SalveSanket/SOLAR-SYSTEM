@@ -9,7 +9,7 @@ pipeline {
         MONGO_URI = "mongodb+srv://superuser:SuperPassword@supercluster.paumtlt.mongodb.net/?retryWrites=true&w=majority&appName=superCluster"
         SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
-        AWS_EC2_HOST = '3.82.5.131'
+        AWS_EC2_HOST = '54.237.27.172'
     }
 
     options {
