@@ -200,8 +200,10 @@ pipeline {
                     sh """
                         ssh -o StrictHostKeyChecking=no -i \$EC2_KEY ubuntu@${AWS_EC2_HOST} '
                             if sudo docker ps -a | grep -q solar-system-app; then
+                                echo "🛑 Stopping existing container..."
                                 sudo docker stop solar-system-app
                                 sudo docker rm solar-system-app
+                                echo "🗑️ Existing container removed."
                             fi
                             sudo docker run -d --name solar-system-app \
                                 -e MONGO_URI="mongodb+srv://superuser:$MONGO_PASSWORD@supercluster.d83jj.mongodb.net/superData" \
@@ -209,6 +211,7 @@ pipeline {
                                 -e MONGO_PASSWORD=\$MONGO_PASSWORD \
                                 -p 3000:3000 \
                                 indicationmark/solar-system-app:$GIT_COMMIT
+                            echo "🚀 New container started successfully!"
                         '
                     """
                 }
@@ -221,7 +224,7 @@ pipeline {
                 branch pattern: "feature/.*", comparator: "REGEXP"
             }
             steps {
-                withAWS(credentials: 'AWS Jenkins Credentials', region: 'us-east-1') {
+                withAWS(credentials: 'AWS Jenkins Credentials',region: 'us-east-1') {
                     echo '🧪 Running Integration Test...'
                     sh '''
                         chmod +x integrationTesting.sh
@@ -239,7 +242,7 @@ pipeline {
             steps {
                 echo '🔄 Updating Kubernetes deployment with new image tag...'
                 sh 'git clone -b main https://gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea'
-                dir('solar-system-gitops-argocd-gitea/Kubernetes') {
+                dir ('solar-system-gitops-argocd-gitea/Kubernetes') {
                     sh '''
                         git checkout main
                         git checkout -b feature/update-image-tag-$BUILD_ID
@@ -253,24 +256,56 @@ pipeline {
                         git push origin -u origin feature/update-image-tag-$BUILD_ID
                     '''
                 }
+                echo '🔄 Kubernetes deployment updated successfully!'
             }
         }
     }
 
     post {
         always {
-            script {
+            script{
                 if (fileExists('solar-system-gitops-argocd-gitea/Kubernetes/deployment.yaml')) {
+                    echo '🔄 Kubernetes deployment file exists, proceeding with cleanup...'
                     sh 'rm -rf solar-system-gitops-argocd-gitea'
+                } else {
+                    echo '⚠️ Kubernetes deployment file does not exist, skipping cleanup.'
                 }
             }
 
-            publishHTML reportDir: 'coverage/lcov-report', reportFiles: 'index.html', reportName: 'Code Coverage Report', allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true
-            publishHTML reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'Dependency Check Report', allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true
-            publishHTML reportDir: './', reportFiles: 'trivy-image-MEDIUM-results.html', reportName: 'Trivy Medium Report', allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true
-            publishHTML reportDir: './', reportFiles: 'trivy-image-CRITICAL-results.html', reportName: 'Trivy Critical Report', allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true
-
+            publishHTML([
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'coverage/lcov-report',
+                reportFiles: 'index.html',
+                reportName: 'Code Coverage Report'
+            ])
+            publishHTML([
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: './',
+                reportFiles: 'dependency-check-jenkins.html',
+                reportName: 'Dependency Check Report'
+            ])
+            publishHTML([
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: './',
+                reportFiles: 'trivy-image-MEDIUM-results.html',
+                reportName: 'Trivy Medium Report'
+            ])
+            publishHTML([
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: './',
+                reportFiles: 'trivy-image-CRITICAL-results.html',
+                reportName: 'Trivy Critical Report'
+            ])
             catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                echo '📦 Archiving artifacts....'
                 junit allowEmptyResults: true, testResults: 'test-results.xml'
                 junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
             }
