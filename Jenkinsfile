@@ -257,6 +257,47 @@ pipeline {
                 }
             }
         }
+
+        stage('Raise Pull Request in Gitea') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    def pr_title = "Update Docker image tag to ${GIT_COMMIT}"
+                    def pr_body = "Auto-generated PR by Jenkins to update the Docker image tag to `${GIT_COMMIT}`."
+                    def feature_branch = "feature/update-image-tag-${BUILD_ID}"
+                    def base_branch = "main"
+                    def repo_owner = "nodejsApplicationProject"
+                    def repo_name = "solar-system-gitops-argocd-gitea"
+                    def gitea_api_base = "https://gitea.com/api/v1"
+                    
+                    echo "🔁 Creating Pull Request from ${feature_branch} to ${base_branch}..."
+
+                    sh """
+                        curl -s -o response.json -w "%{http_code}" -X POST "${gitea_api_base}/repos/${repo_owner}/${repo_name}/pulls" \\
+                        -H "Authorization: token ${GITEA_TOKEN}" \\
+                        -H "Content-Type: application/json" \\
+                        -d '{
+                            "head": "${feature_branch}",
+                            "base": "${base_branch}",
+                            "title": "${pr_title}",
+                            "body": "${pr_body}"
+                        }' > status_code.txt
+
+                        echo "Status: \$(cat status_code.txt)"
+                        echo "Response: \$(cat response.json)"
+                    """
+
+                    def status = readFile('status_code.txt').trim()
+                    if (status != "201") {
+                        error "❌ Failed to create Pull Request. Status code: ${status}. See response.json for details."
+                    } else {
+                        echo "✅ Pull Request created successfully!"
+                    }
+                }
+            }
+        }
     }
 
     post {
