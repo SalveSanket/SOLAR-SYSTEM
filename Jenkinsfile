@@ -10,6 +10,7 @@ pipeline {
         SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
         AWS_EC2_HOST = '54.167.196.168'
+        GITEA_TOKEN = credentials('GITEA_TOKEN')
     }
 
     options {
@@ -192,6 +193,9 @@ pipeline {
 
         stage('Deploy to AWS EC2') {
             options { timestamps() }
+            when {
+                branch pattern: "feature/.*", comparator: "REGEXP"
+            }
             steps {
                 withCredentials([
                     sshUserPrivateKey(credentialsId: 'AWS_Deployment-Server_SSH-Key', keyFileVariable: 'EC2_KEY'),
@@ -221,6 +225,9 @@ pipeline {
 
         stage('Integration Testing') {
             options { timestamps() }
+            when {
+                branch pattern: "feature/.*", comparator: "REGEXP"
+            }
             steps {
                 withAWS(credentials: 'AWS Jenkins Credentials',region: 'us-east-1') {
                     echo '🧪 Running Integration Test...'
@@ -235,7 +242,7 @@ pipeline {
         stage('K8 update image tag') {
             options { timestamps() }
             when {
-                branch 'PR*'
+                branch 'main'
             }
             steps {
                 echo '🔄 Updating Kubernetes deployment with new image tag...'
@@ -263,6 +270,15 @@ pipeline {
 
     post {
         always {
+            script{
+                if (fileExists('solar-system-gitops-argocd-gitea/Kubernetes/deployment.yaml')) {
+                    echo '🔄 Kubernetes deployment file exists, proceeding with cleanup...'
+                    sh 'rm -rf solar-system-gitops-argocd-gitea'
+                } else {
+                    echo '⚠️ Kubernetes deployment file does not exist, skipping cleanup.'
+                }
+            }
+
             publishHTML([
                 allowMissing: true,
                 alwaysLinkToLastBuild: true,
