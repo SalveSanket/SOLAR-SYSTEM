@@ -9,7 +9,7 @@ pipeline {
         MONGO_URI = "mongodb+srv://superuser:SuperPassword@supercluster.paumtlt.mongodb.net/?retryWrites=true&w=majority&appName=superCluster"
         SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
-        AWS_EC2_HOST = '54.237.27.172'
+        AWS_EC2_HOST = '54.167.196.168'
     }
 
     options {
@@ -229,6 +229,34 @@ pipeline {
                         ./integrationTesting.sh
                     '''
                 }
+            }
+        }
+
+        stage('K8 update image tag') {
+            options { timestamps() }
+            when {
+                branch 'PR*'
+            }
+            steps {
+                echo '🔄 Updating Kubernetes deployment with new image tag...'
+                sh 'git clone -b main https://gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea'
+                dir ('solar-system-gitops-argocd-gitea/Kubernetes') {
+                    sh '''
+                        #### Replace Docker image tag ####
+                        git checkout main
+                        git checkout -b feature/update-image-tag-$BUILD_ID
+                        sed -i "s|indicationmark/solar-system-app:.*|indicationmark/solar-system-app:$GIT_COMMIT|g" deployment.yaml
+
+                        #### Commit and push changes ####
+                        git config user.name "Jenkins CI"
+                        git config user.email "sanketsalve01@gmail.com"
+                        git remote set-url origin https://$GITEA_TOKEN@gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea
+                        git add .
+                        git commit -m "Update Docker image tag to $GIT_COMMIT"
+                        git push origin -u origin feature/update-image-tag-$BUILD_ID
+                    '''
+                }
+                echo '🔄 Kubernetes deployment updated successfully!'     
             }
         }
     }
