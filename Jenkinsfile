@@ -241,22 +241,20 @@ pipeline {
             }
             steps {
                 echo '🔄 Updating Kubernetes deployment with new image tag...'
-                sh 'git clone -b main https://gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea'
-                dir ('solar-system-gitops-argocd-gitea/Kubernetes') {
+                sh 'rm -rf solar-system-gitops-argocd-gitea && git clone -b main https://$GITEA_TOKEN@gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea.git'
+                dir('solar-system-gitops-argocd-gitea/Kubernetes') {
                     sh '''
-                        git checkout main
                         git checkout -b feature/update-image-tag-$BUILD_ID
                         sed -i "s|indicationmark/solar-system-app:.*|indicationmark/solar-system-app:$GIT_COMMIT|g" deployment.yaml
 
                         git config user.name "Jenkins CI"
                         git config user.email "sanketsalve01@gmail.com"
-                        git remote set-url origin https://$GITEA_TOKEN@gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea
-                        git add .
+
+                        git add deployment.yaml
                         git commit -m "Update Docker image tag to $GIT_COMMIT"
-                        git push origin -u origin feature/update-image-tag-$BUILD_ID
+                        git push origin feature/update-image-tag-$BUILD_ID
                     '''
                 }
-                echo '🔄 Kubernetes deployment updated successfully!'
             }
         }
     }
