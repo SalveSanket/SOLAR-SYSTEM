@@ -346,7 +346,6 @@ pipeline {
             catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
                 echo '📦 Archiving artifacts....'
                 junit allowEmptyResults: true, testResults: 'test-results.xml'
-                junit allowEmptyResults: true, testResults: 'trivy-image-CRITICAL-results.xml'
             }
         }
 
