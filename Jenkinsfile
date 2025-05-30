@@ -186,10 +186,7 @@ pipeline {
         stage('Push Docker Image') {
             options { timestamps() }
             steps {
-                echo '🚀 Pushing Docker image to Docker Hub....'
-                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
-                    sh 'docker push indicationmark/solar-system-app:$GIT_COMMIT'
-                }
+                echo '✅ Docker image was already pushed during multi-arch build stage using buildx --push. Skipping manual push.'
             }
         }
 
