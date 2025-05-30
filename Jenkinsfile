@@ -123,14 +123,21 @@ pipeline {
         stage('Build Docker Image') {
             options { timestamps() }
             steps {
-                echo '🐳 Cleaning up old Docker images and building new one for linux/amd64 platform....'
-                sh '''
-                    docker rmi -f $(docker images -q) || true
-                    docker buildx create --use || true
-                    docker buildx build --platform linux/amd64 \
-                        -t indicationmark/solar-system-app:$GIT_COMMIT \
-                        --load .
-                '''
+                echo '🐳 Building multi-architecture Docker image for amd64 and arm64...'
+                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                    sh '''
+                        # Remove old images to avoid local clutter
+                        docker rmi -f $(docker images -q) || true
+
+                        # Set up Buildx builder (create only if not exists)
+                        docker buildx create --name multiarch-builder --use || docker buildx use multiarch-builder
+
+                        # Build and push multi-arch image to Docker Hub
+                        docker buildx build --platform linux/amd64,linux/arm64 \
+                            -t indicationmark/solar-system-app:$GIT_COMMIT \
+                            --push .
+                    '''
+                }
             }
         }
 
