@@ -302,6 +302,58 @@ pipeline {
                 }
             }
         }
+
+        stage('Manual Verification - App Deployment Check') {
+            when {
+                branch 'main'
+            }
+            agent any
+            environment {
+                NODE_PORT_CMD = "kubectl get svc solar-system-service -n solar-system -o=jsonpath='{.spec.ports[0].nodePort}' | tr -d \"'\""
+                NODE_IP_CMD   = "minikube ip"
+            }
+            steps {
+                script {
+                def nodePort = sh(script: NODE_PORT_CMD, returnStdout: true).trim()
+                def nodeIP   = sh(script: NODE_IP_CMD, returnStdout: true).trim()
+                env.ZAP_TARGET = "http://${nodeIP}:${nodePort}"
+
+                echo "🕵️‍♂️ Please verify the app is accessible at: ${env.ZAP_TARGET}"
+                input message: "Is the application running at ${env.ZAP_TARGET}?", ok: 'Yes, proceed'
+                }
+            }
+        }
+
+            stage('DAST Scan with OWASP ZAP') {
+            when {
+                branch 'main'
+            }
+            agent any
+            steps {
+                script {
+                echo "🔍 Starting OWASP ZAP DAST scan on ${env.ZAP_TARGET}..."
+                sh """
+                    docker run --rm -v \$PWD:/zap/wrk:rw -t owasp/zap2docker-stable zap-baseline.py \\
+                    -t ${env.ZAP_TARGET} \\
+                    -r zap-report.html \\
+                    -J zap-report.json \\
+                    -x zap-report.xml \\
+                    -m 2 \\
+                    -I || true
+                """
+                echo '📄 ZAP scan completed. Publishing reports...'
+                }
+                publishHTML(target: [
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: '.',
+                reportFiles: 'zap-report.html',
+                reportName: 'OWASP ZAP DAST Report'
+                ])
+                junit 'zap-report.xml'
+            }
+        }
     }
 
     post {
