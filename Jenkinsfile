@@ -266,11 +266,15 @@ pipeline {
                     options { timestamps() }
                     steps {
                         script {
-                            def minikubeStatus = sh(script: 'minikube status --format "{{.Host}}" || echo "NotFound"', returnStdout: true).trim()
-                            if (minikubeStatus == 'Running') {
+                            def minikubeStatus = sh(
+                                script: 'minikube status --format "{{.Host}}" || echo "NotFound"',
+                                returnStdout: true
+                            ).trim()
+
+                            if (minikubeStatus == "Running") {
                                 echo '✅ Minikube is running.'
                             } else {
-                                error '❌ Minikube is not running. Start it manually before retrying.'
+                                error '❌ Minikube is not running. Please start it before retrying.'
                             }
 
                             def clusterInfo = sh(script: 'kubectl cluster-info || echo "Error"', returnStdout: true).trim()
