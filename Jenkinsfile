@@ -373,6 +373,12 @@ pipeline {
                 junit 'zap-report.xml'
             }
         }
+
+        stage('Enforce Build Retention') {
+            steps {
+                sh '/usr/local/bin/jenkins-rotate-builds.sh'
+            }
+        }
     }
 
     post {
