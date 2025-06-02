@@ -324,7 +324,7 @@ pipeline {
             }
         }
 
-            stage('DAST Scan with OWASP ZAP') {
+        stage('OWASP ZAP DAST Scan') {
             when {
                 branch 'main'
             }
