@@ -238,49 +238,26 @@ pipeline {
             }
         }
 
-        stage('Prepare Kubernetes Deployment') {
-            when { branch 'main' }
-            parallel {
-                stage('K8 update image tag') {
-                    options { timestamps() }
-                    steps {
-                        echo '🔄 Updating Kubernetes deployment with new image tag...'
-                        sh 'rm -rf solar-system-gitops-argocd-gitea && git clone -b main https://$GITEA_TOKEN@gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea.git'
-                        dir('solar-system-gitops-argocd-gitea/Kubernetes') {
-                            sh '''
-                                git checkout -b feature/update-image-tag-$BUILD_ID
-                                sed -i "s|indicationmark/solar-system-app:.*|indicationmark/solar-system-app:$GIT_COMMIT|g" deployment.yaml
+        stage('K8 update image tag') {
+            options { timestamps() }
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🔄 Updating Kubernetes deployment with new image tag...'
+                sh 'rm -rf solar-system-gitops-argocd-gitea && git clone -b main https://$GITEA_TOKEN@gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea.git'
+                dir('solar-system-gitops-argocd-gitea/Kubernetes') {
+                    sh '''
+                        git checkout -b feature/update-image-tag-$BUILD_ID
+                        sed -i "s|indicationmark/solar-system-app:.*|indicationmark/solar-system-app:$GIT_COMMIT|g" deployment.yaml
 
-                                git config user.name "Jenkins CI"
-                                git config user.email "sanketsalve01@gmail.com"
+                        git config user.name "Jenkins CI"
+                        git config user.email "sanketsalve01@gmail.com"
 
-                                git add deployment.yaml
-                                git commit -m "Update Docker image tag to $GIT_COMMIT"
-                                git push origin feature/update-image-tag-$BUILD_ID
-                            '''
-                        }
-                    }
-                }
-
-                stage('Verify Kubernetes Readiness') {
-                    options { timestamps() }
-                    steps {
-                        script {
-                            def minikubeStatus = sh(
-                                script: 'minikube status --format "{{.Host}}" || echo "NotFound"',
-                                returnStdout: true
-                            ).trim()
-
-                            if (minikubeStatus == "Running") {
-                                echo '✅ Minikube is running.'
-                            } else {
-                                error '❌ Minikube is not running. Please start it before retrying.'
-                            }
-
-                            def clusterInfo = sh(script: 'kubectl cluster-info || echo "Error"', returnStdout: true).trim()
-                            echo "📡 Cluster Info:\n${clusterInfo}"
-                        }
-                    }
+                        git add deployment.yaml
+                        git commit -m "Update Docker image tag to $GIT_COMMIT"
+                        git push origin feature/update-image-tag-$BUILD_ID
+                    '''
                 }
             }
         }
@@ -321,6 +298,49 @@ pipeline {
                         error "❌ Failed to create Pull Request. Status code: ${status}. See response.json for details."
                     } else {
                         echo "✅ Pull Request created successfully!"
+                    }
+                }
+            }
+        }
+
+        stage('Verify Kubernetes Readiness') {
+            when { branch 'main' }
+            steps {
+                script {
+                    echo '🔍 Checking Minikube status...'
+                    def minikubeStatus = sh(
+                        script: 'minikube status --format "{{.Host}}" || echo "NotFound"',
+                        returnStdout: true
+                    ).trim()
+                    if (minikubeStatus != 'Running') {
+                        echo "⚠️ Minikube not running. Trying to start Minikube as Jenkins user..."
+                        // Try to start Minikube and capture output
+                        def startOutput = sh(
+                            script: 'minikube start || echo "FAILED_TO_START"',
+                            returnStdout: true
+                        ).trim()
+                        minikubeStatus = sh(
+                            script: 'minikube status --format "{{.Host}}" || echo "NotFound"',
+                            returnStdout: true
+                        ).trim()
+                        if (minikubeStatus != 'Running') {
+                            error """
+                            ❌ Minikube could not be started by Jenkins.
+
+                            Troubleshooting checklist:
+                            - Jenkins user must be in the 'docker' (and 'libvirt' if using KVM/VirtualBox) groups.
+                            - Jenkins must be restarted after group change.
+                            - Minikube should be initialized at least once as the Jenkins user.
+                            - /var/lib/jenkins/.kube and /var/lib/jenkins/.minikube must exist and be owned by Jenkins user.
+
+                            Minikube start output:
+                            ${startOutput}
+                            """
+                        } else {
+                            echo '✅ Minikube started successfully!'
+                        }
+                    } else {
+                        echo '✅ Minikube is already running.'
                     }
                 }
             }
@@ -375,12 +395,6 @@ pipeline {
                 reportName: 'OWASP ZAP DAST Report'
                 ])
                 junit 'zap-report.xml'
-            }
-        }
-
-        stage('Enforce Build Retention') {
-            steps {
-                sh '/usr/local/bin/jenkins-rotate-builds.sh'
             }
         }
     }
