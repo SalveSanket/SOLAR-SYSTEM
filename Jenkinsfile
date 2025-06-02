@@ -238,26 +238,45 @@ pipeline {
             }
         }
 
-        stage('K8 update image tag') {
-            options { timestamps() }
-            when {
-                branch 'main'
-            }
-            steps {
-                echo '🔄 Updating Kubernetes deployment with new image tag...'
-                sh 'rm -rf solar-system-gitops-argocd-gitea && git clone -b main https://$GITEA_TOKEN@gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea.git'
-                dir('solar-system-gitops-argocd-gitea/Kubernetes') {
-                    sh '''
-                        git checkout -b feature/update-image-tag-$BUILD_ID
-                        sed -i "s|indicationmark/solar-system-app:.*|indicationmark/solar-system-app:$GIT_COMMIT|g" deployment.yaml
+        stage('Prepare Kubernetes Deployment') {
+            when { branch 'main' }
+            parallel {
+                stage('K8 update image tag') {
+                    options { timestamps() }
+                    steps {
+                        echo '🔄 Updating Kubernetes deployment with new image tag...'
+                        sh 'rm -rf solar-system-gitops-argocd-gitea && git clone -b main https://$GITEA_TOKEN@gitea.com/nodejsApplicationProject/solar-system-gitops-argocd-gitea.git'
+                        dir('solar-system-gitops-argocd-gitea/Kubernetes') {
+                            sh '''
+                                git checkout -b feature/update-image-tag-$BUILD_ID
+                                sed -i "s|indicationmark/solar-system-app:.*|indicationmark/solar-system-app:$GIT_COMMIT|g" deployment.yaml
 
-                        git config user.name "Jenkins CI"
-                        git config user.email "sanketsalve01@gmail.com"
+                                git config user.name "Jenkins CI"
+                                git config user.email "sanketsalve01@gmail.com"
 
-                        git add deployment.yaml
-                        git commit -m "Update Docker image tag to $GIT_COMMIT"
-                        git push origin feature/update-image-tag-$BUILD_ID
-                    '''
+                                git add deployment.yaml
+                                git commit -m "Update Docker image tag to $GIT_COMMIT"
+                                git push origin feature/update-image-tag-$BUILD_ID
+                            '''
+                        }
+                    }
+                }
+
+                stage('Verify Kubernetes Readiness') {
+                    options { timestamps() }
+                    steps {
+                        script {
+                            def minikubeStatus = sh(script: 'minikube status --format "{{.Host}}" || echo "NotFound"', returnStdout: true).trim()
+                            if (minikubeStatus == 'Running') {
+                                echo '✅ Minikube is running.'
+                            } else {
+                                error '❌ Minikube is not running. Start it manually before retrying.'
+                            }
+
+                            def clusterInfo = sh(script: 'kubectl cluster-info || echo "Error"', returnStdout: true).trim()
+                            echo "📡 Cluster Info:\n${clusterInfo}"
+                        }
+                    }
                 }
             }
         }
