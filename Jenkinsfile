@@ -144,34 +144,31 @@ pipeline {
         stage('Trivy Scan') {
             steps {
                 timestamps {
-                    tool name: 'trivy-latest'
-                    withEnv(["PATH+TRIVY=${tool('trivy-latest')}/bin"]) {
-                        echo '🔍 Running Trivy vulnerability scan....'
-                        catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
-                            script {
-                                // Pull image locally
-                                sh "docker pull indicationmark/solar-system-app:$GIT_COMMIT"
+                    echo '🔍 Running Trivy vulnerability scan....'
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                        script {
+                            // Pull image locally
+                            sh "docker pull indicationmark/solar-system-app:$GIT_COMMIT"
 
-                                // Critical severity scan
-                                sh """
-                                    trivy image indicationmark/solar-system-app:$GIT_COMMIT \
-                                    --severity CRITICAL \
-                                    --exit-code 1 \
-                                    --quiet \
-                                    --format json \
-                                    -o trivy-image-CRITICAL-results.json
-                                """
+                            // Scan for critical vulnerabilities
+                            sh """
+                                trivy image indicationmark/solar-system-app:$GIT_COMMIT \
+                                --severity CRITICAL \
+                                --exit-code 1 \
+                                --quiet \
+                                --format json \
+                                -o trivy-image-CRITICAL-results.json
+                            """
 
-                                // Medium + Low severity scan
-                                sh """
-                                    trivy image indicationmark/solar-system-app:$GIT_COMMIT \
-                                    --severity LOW,MEDIUM \
-                                    --exit-code 0 \
-                                    --quiet \
-                                    --format json \
-                                    -o trivy-image-MEDIUM-results.json
-                                """
-                            }
+                            // Scan for medium and low vulnerabilities
+                            sh """
+                                trivy image indicationmark/solar-system-app:$GIT_COMMIT \
+                                --severity LOW,MEDIUM \
+                                --exit-code 0 \
+                                --quiet \
+                                --format json \
+                                -o trivy-image-MEDIUM-results.json
+                            """
                         }
                     }
                 }
