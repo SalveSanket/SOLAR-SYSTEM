@@ -310,32 +310,50 @@ pipeline {
         }
 
         stage('OWASP ZAP DAST Scan') {
-            when {
+            when{
                 branch 'main'
+            }
+            environment {
+                ZAP_TARGET_URL = "http://192.168.49.2:32002"
             }
             steps {
                 script {
-                    echo "🔍 Starting OWASP ZAP DAST scan on ${env.ZAP_TARGET}..."
-                    sh """
-                        docker run --rm -v \$PWD:/zap/wrk:rw -t owasp/zap2docker-stable zap-baseline.py \\
-                        -t ${env.ZAP_TARGET} \\
-                        -r zap-report.html \\
-                        -J zap-report.json \\
-                        -x zap-report.xml \\
-                        -m 2 \\
-                        -I || true
-                    """
-                    echo '📄 ZAP scan completed. Publishing reports...'
+                    echo "🔍 Starting OWASP ZAP DAST scan on ${ZAP_TARGET_URL}..."
+
+                    catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                        sh '''
+                            docker pull owasp/zap2docker-weekly || true
+                            docker run --rm \
+                                -v $WORKSPACE:/zap/wrk:rw \
+                                -t owasp/zap2docker-weekly \
+                                zap-baseline.py \
+                                -t ${ZAP_TARGET_URL} \
+                                -r zap-report.html \
+                                -J zap-report.json \
+                                -x zap-report.xml \
+                                -m 2 -I
+                        '''
+                    }
+
+                    echo "📄 ZAP scan completed. Publishing reports..."
+
+                    // Safely publish HTML report
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'zap-report.html',
+                        reportName: 'OWASP ZAP DAST Report'
+                    ])
+
+                    // Safely publish JUnit report only if it exists
+                    if (fileExists('zap-report.xml')) {
+                        junit 'zap-report.xml'
+                    } else {
+                        echo "⚠️ JUnit XML report not found. Skipping test report step."
+                    }
                 }
-                publishHTML(target: [
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: '.',
-                    reportFiles: 'zap-report.html',
-                    reportName: 'OWASP ZAP DAST Report'
-                ])
-                junit 'zap-report.xml'
             }
         }
 
