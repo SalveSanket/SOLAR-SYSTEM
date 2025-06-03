@@ -314,7 +314,8 @@ pipeline {
                 branch 'main'
             }
             environment {
-                ZAP_TARGET_URL = "http://192.168.49.2:32002"
+                // Use Docker's gateway to access Minikube app running on host
+                ZAP_TARGET_URL = "http://host.docker.internal:32002"
             }
             steps {
                 script {
@@ -322,12 +323,15 @@ pipeline {
 
                     catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                         sh '''
-                            # No login needed for GHCR public ZAP image
-                            docker pull ghcr.io/zaproxy/zaproxy
+                            # Pull ZAP Docker image from GitHub Container Registry
+                            docker pull ghcr.io/zaproxy/zaproxy:latest || true
 
+                            # Run ZAP with proper volume and host access
                             docker run --rm \
-                                -v $WORKSPACE:/zap/wrk \
-                                ghcr.io/zaproxy/zaproxy zap-baseline.py \
+                                -v $WORKSPACE:/zap/wrk:z \
+                                --add-host=host.docker.internal:host-gateway \
+                                ghcr.io/zaproxy/zaproxy \
+                                zap-baseline.py \
                                 -t ${ZAP_TARGET_URL} \
                                 -r zap-report.html \
                                 -J zap-report.json \
