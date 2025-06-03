@@ -310,7 +310,7 @@ pipeline {
         }
 
         stage('OWASP ZAP DAST Scan') {
-            when{
+            when {
                 branch 'main'
             }
             environment {
@@ -322,10 +322,10 @@ pipeline {
 
                     catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                         sh '''
-                            docker pull owasp/zap2docker-weekly || true
+                            docker pull owasp/zap2docker-stable || true
                             docker run --rm \
                                 -v $WORKSPACE:/zap/wrk:rw \
-                                -t owasp/zap2docker-weekly \
+                                -t owasp/zap2docker-stable \
                                 zap-baseline.py \
                                 -t ${ZAP_TARGET_URL} \
                                 -r zap-report.html \
@@ -337,7 +337,6 @@ pipeline {
 
                     echo "📄 ZAP scan completed. Publishing reports..."
 
-                    // Safely publish HTML report
                     publishHTML([
                         allowMissing: true,
                         alwaysLinkToLastBuild: true,
@@ -347,7 +346,6 @@ pipeline {
                         reportName: 'OWASP ZAP DAST Report'
                     ])
 
-                    // Safely publish JUnit report only if it exists
                     if (fileExists('zap-report.xml')) {
                         junit 'zap-report.xml'
                     } else {
