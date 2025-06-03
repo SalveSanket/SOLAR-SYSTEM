@@ -303,49 +303,6 @@ pipeline {
             }
         }
 
-        stage('Verify Kubernetes Readiness') {
-            when { branch 'main' }
-            steps {
-                script {
-                    echo '🔍 Checking Minikube status...'
-                    def minikubeStatus = sh(
-                        script: 'minikube status --format "{{.Host}}" || echo "NotFound"',
-                        returnStdout: true
-                    ).trim()
-                    if (minikubeStatus != 'Running') {
-                        echo "⚠️ Minikube not running. Trying to start Minikube as Jenkins user..."
-                        // Try to start Minikube and capture output
-                        def startOutput = sh(
-                            script: 'minikube start || echo "FAILED_TO_START"',
-                            returnStdout: true
-                        ).trim()
-                        minikubeStatus = sh(
-                            script: 'minikube status --format "{{.Host}}" || echo "NotFound"',
-                            returnStdout: true
-                        ).trim()
-                        if (minikubeStatus != 'Running') {
-                            error """
-                            ❌ Minikube could not be started by Jenkins.
-
-                            Troubleshooting checklist:
-                            - Jenkins user must be in the 'docker' (and 'libvirt' if using KVM/VirtualBox) groups.
-                            - Jenkins must be restarted after group change.
-                            - Minikube should be initialized at least once as the Jenkins user.
-                            - /var/lib/jenkins/.kube and /var/lib/jenkins/.minikube must exist and be owned by Jenkins user.
-
-                            Minikube start output:
-                            ${startOutput}
-                            """
-                        } else {
-                            echo '✅ Minikube started successfully!'
-                        }
-                    } else {
-                        echo '✅ Minikube is already running.'
-                    }
-                }
-            }
-        }
-
         stage('Manual Verification - App Deployment Check') {
             when {
                 branch 'main'
@@ -395,6 +352,12 @@ pipeline {
                 reportName: 'OWASP ZAP DAST Report'
                 ])
                 junit 'zap-report.xml'
+            }
+        }
+
+        stage('Enforce Build Retention') {
+            steps {
+                sh '/usr/local/bin/jenkins-rotate-builds.sh'
             }
         }
     }
