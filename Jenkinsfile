@@ -309,52 +309,48 @@ pipeline {
             }
         }
 
-        stage('OWASP ZAP DAST Scan') {
+        stage('DAST - OWASP ZAP') {
             when {
                 branch 'main'
             }
-            environment {
-                // Use Docker's gateway to access Minikube app running on host
-                ZAP_TARGET_URL = "http://host.docker.internal:32002"
-            }
             steps {
+                sh '''
+                    echo "🔐 Running OWASP ZAP API scan..."
+
+                    # Ensure permissions are OK
+                    chmod 777 $(pwd)
+
+                    # Run ZAP container with access to Minikube-hosted app via host.docker.internal
+                    docker run --rm \
+                        -v $(pwd):/zap/wrk:z \
+                        --add-host=host.docker.internal:host-gateway \
+                        ghcr.io/zaproxy/zaproxy \
+                        zap-api-scan.py \
+                        -t http://host.docker.internal:32002/api-docs \
+                        -f openapi \
+                        -r zap_report.html \
+                        -w zap_report.md \
+                        -J zap_json_report.json \
+                        -x zap_xml_report.xml \
+                        -I -m 2
+                '''
+                
+                // Publish HTML report
+                publishHTML([
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: '.',
+                    reportFiles: 'zap_report.html',
+                    reportName: 'OWASP ZAP API Scan Report'
+                ])
+
+                // Publish JUnit-style XML if available
                 script {
-                    echo "🔍 Starting OWASP ZAP DAST scan on ${ZAP_TARGET_URL}..."
-
-                    catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                        sh '''
-                            # Pull ZAP Docker image from GitHub Container Registry
-                            docker pull ghcr.io/zaproxy/zaproxy:latest || true
-
-                            # Run ZAP with proper volume and host access
-                            docker run --rm \
-                                -v $WORKSPACE:/zap/wrk:z \
-                                --add-host=host.docker.internal:host-gateway \
-                                ghcr.io/zaproxy/zaproxy \
-                                zap-baseline.py \
-                                -t ${ZAP_TARGET_URL} \
-                                -r zap-report.html \
-                                -J zap-report.json \
-                                -x zap-report.xml \
-                                -m 2 -I
-                        '''
-                    }
-
-                    echo "📄 ZAP scan completed. Publishing reports..."
-
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: '.',
-                        reportFiles: 'zap-report.html',
-                        reportName: 'OWASP ZAP DAST Report'
-                    ])
-
-                    if (fileExists('zap-report.xml')) {
-                        junit 'zap-report.xml'
+                    if (fileExists('zap_xml_report.xml')) {
+                        junit 'zap_xml_report.xml'
                     } else {
-                        echo "⚠️ JUnit XML report not found. Skipping test report step."
+                        echo "⚠️ zap_xml_report.xml not found. Skipping test report publishing."
                     }
                 }
             }
