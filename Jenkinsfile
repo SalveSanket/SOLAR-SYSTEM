@@ -321,18 +321,20 @@ pipeline {
                     echo "🔍 Starting OWASP ZAP DAST scan on ${ZAP_TARGET_URL}..."
 
                     catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                        sh '''
-                            docker pull ghcr.io/zaproxy/zap-stable || true
-                            docker run --rm \
-                                -v $WORKSPACE:/zap/wrk:rw \
-                                -t ghcr.io/zaproxy/zap-stable \
-                                zap-baseline.py \
-                                -t ${ZAP_TARGET_URL} \
-                                -r zap-report.html \
-                                -J zap-report.json \
-                                -x zap-report.xml \
-                                -m 2 -I
-                        '''
+                        withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                            sh '''
+                                docker pull owasp/zap2docker-stable || true
+                                docker run --rm \
+                                    -v $WORKSPACE:/zap/wrk:rw \
+                                    -t owasp/zap2docker-stable \
+                                    zap-baseline.py \
+                                    -t ${ZAP_TARGET_URL} \
+                                    -r zap-report.html \
+                                    -J zap-report.json \
+                                    -x zap-report.xml \
+                                    -m 2 -I
+                            '''
+                        }
                     }
 
                     echo "📄 ZAP scan completed. Publishing reports..."
