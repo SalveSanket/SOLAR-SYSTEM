@@ -337,6 +337,7 @@ pipeline {
                 ])
                 junit 'zap-report.xml'
             }
+            echo '✅ OWASP ZAP DAST scan completed successfully!'
         }
 
         stage('Enforce Build Retention') {
