@@ -315,18 +315,17 @@ pipeline {
             }
             steps {
                 sh '''
-                    echo "🔐 Running OWASP ZAP API scan..."
+                    echo "🔍 Starting OWASP ZAP API scan..."
 
-                    # Ensure permissions are OK
+                    # Get working dir permissions
                     chmod 777 $(pwd)
 
-                    # Run ZAP container with access to Minikube-hosted app via host.docker.internal
+                    # Run ZAP API scan
                     docker run --rm \
                         -v $(pwd):/zap/wrk:z \
-                        --add-host=host.docker.internal:host-gateway \
                         ghcr.io/zaproxy/zaproxy \
                         zap-api-scan.py \
-                        -t http://host.docker.internal:32002/api-docs \
+                        -t http://192.168.49.2:32002/api-docs \
                         -f openapi \
                         -r zap_report.html \
                         -w zap_report.md \
@@ -334,8 +333,7 @@ pipeline {
                         -x zap_xml_report.xml \
                         -I -m 2
                 '''
-                
-                // Publish HTML report
+
                 publishHTML([
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
@@ -345,12 +343,11 @@ pipeline {
                     reportName: 'OWASP ZAP API Scan Report'
                 ])
 
-                // Publish JUnit-style XML if available
                 script {
                     if (fileExists('zap_xml_report.xml')) {
                         junit 'zap_xml_report.xml'
                     } else {
-                        echo "⚠️ zap_xml_report.xml not found. Skipping test report publishing."
+                        echo "⚠️ zap_xml_report.xml not found. Skipping JUnit report."
                     }
                 }
             }
