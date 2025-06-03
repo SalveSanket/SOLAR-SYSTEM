@@ -142,42 +142,35 @@ pipeline {
         }
 
         stage('Trivy Scan') {
-            options { timestamps() }
-            steps {
-                echo '🔍 Running Trivy vulnerability scan....'
-                script {
-                    def exitCode = sh(script: '''
-                        trivy image indicationmark/solar-system-app:$GIT_COMMIT \
-                            --severity CRITICAL \
-                            --exit-code 1 \
-                            --quiet \
-                            --format json -o trivy-image-CRITICAL-results.json || true
-                    ''', returnStatus: true)
+            timestamps {
+                tool name: 'trivy-latest'
+                withEnv(["PATH+TRIVY=${tool('trivy-latest')}/bin"]) {
+                    echo '🔍 Running Trivy vulnerability scan....'
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                        script {
+                            // Pull the image locally to prevent 301 error
+                            sh "docker pull indicationmark/solar-system-app:$GIT_COMMIT"
 
-                    sh '''
-                        trivy image indicationmark/solar-system-app:$GIT_COMMIT \
-                            --severity LOW,MEDIUM \
-                            --exit-code 0 \
-                            --quiet \
-                            --format json -o trivy-image-MEDIUM-results.json
+                            // Scan for critical vulnerabilities (fail only this stage if found)
+                            sh """
+                                trivy image indicationmark/solar-system-app:$GIT_COMMIT \
+                                --severity CRITICAL \
+                                --exit-code 1 \
+                                --quiet \
+                                --format json \
+                                -o trivy-image-CRITICAL-results.json
+                            """
 
-                        trivy convert --format template -t "/usr/local/share/trivy/templates/html.tpl" \
-                            -o trivy-image-MEDIUM-results.html trivy-image-MEDIUM-results.json || echo "Conversion failed"
-
-                        trivy convert --format template -t "/usr/local/share/trivy/templates/html.tpl" \
-                            -o trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json || echo "Conversion failed"
-
-                        trivy convert --format template -t "/usr/local/share/trivy/templates/junit.tpl" \
-                            -o trivy-image-MEDIUM-results.xml trivy-image-MEDIUM-results.json || echo "Conversion failed"
-
-                        trivy convert --format template -t "/usr/local/share/trivy/templates/junit.tpl" \
-                            -o trivy-image-CRITICAL-results.xml trivy-image-CRITICAL-results.json || echo "Conversion failed"
-                    '''
-
-                    if (exitCode != 0) {
-                        echo '❗️Critical vulnerabilities found in Trivy scan!'
-                    } else {
-                        echo '✅ No critical vulnerabilities in Trivy scan.'
+                            // Scan for medium and low vulnerabilities (do not fail even this stage)
+                            sh """
+                                trivy image indicationmark/solar-system-app:$GIT_COMMIT \
+                                --severity LOW,MEDIUM \
+                                --exit-code 0 \
+                                --quiet \
+                                --format json \
+                                -o trivy-image-MEDIUM-results.json
+                            """
+                        }
                     }
                 }
             }
