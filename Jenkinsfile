@@ -322,10 +322,10 @@ pipeline {
 
                     catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                         sh '''
-                            docker pull owasp/zap2docker-stable || true
+                            docker pull ghcr.io/zaproxy/zap-stable || true
                             docker run --rm \
                                 -v $WORKSPACE:/zap/wrk:rw \
-                                -t owasp/zap2docker-stable \
+                                -t ghcr.io/zaproxy/zap-stable \
                                 zap-baseline.py \
                                 -t ${ZAP_TARGET_URL} \
                                 -r zap-report.html \
