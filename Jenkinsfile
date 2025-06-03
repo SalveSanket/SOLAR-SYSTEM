@@ -321,6 +321,7 @@ pipeline {
                 echo "🕵️‍♂️ Please verify the app is accessible at: ${env.ZAP_TARGET}"
                 input message: "Is the application running at ${env.ZAP_TARGET}?", ok: 'Yes, proceed'
                 }
+                echo "✅ Manual verification completed. Proceeding with OWASP ZAP DAST scan."
             }
         }
 
