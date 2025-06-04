@@ -322,35 +322,25 @@ pipeline {
 
                     catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                         sh '''
-                            # Prepare output directory
+                            # 🔄 Clean zap_output directory to avoid permission issues
                             rm -rf zap_output
                             mkdir -p zap_output
 
-                            # Run ZAP scan
+                            # 🐳 Run OWASP ZAP baseline scan using Docker
                             docker run --rm \
+                                --user root \
                                 --network="host" \
                                 -v $(pwd)/zap_output:/zap/wrk \
-                                ghcr.io/zaproxy/zaproxy \
+                                ghcr.io/zaproxy/zaproxy:latest \
                                 zap-baseline.py \
-                                -t ${ZAP_TARGET_URL} \
+                                -t http://192.168.49.2:32002 \
                                 -r zap-report.html \
                                 -J zap-report.json \
                                 -x zap-report.xml \
                                 -m 2 -I || true
                         '''
                     }
-
                     echo "📄 ZAP scan completed. Publishing reports..."
-
-                    // Publish HTML report
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'zap_output',
-                        reportFiles: 'zap-report.html',
-                        reportName: 'OWASP ZAP DAST Report'
-                    ])
                 }
             }
         }
@@ -394,17 +384,17 @@ pipeline {
                 alwaysLinkToLastBuild: true,
                 keepAll: true,
                 reportDir: './',
-                reportFiles: 'trivy-image-MEDIUM-results.html',
-                reportName: 'Trivy Medium Report'
+                reportFiles: 'trivy-image-CRITICAL-results.html',
+                reportName: 'Trivy Critical Report'
             ])
             publishHTML([
                 allowMissing: true,
                 alwaysLinkToLastBuild: true,
                 keepAll: true,
-                reportDir: './',
-                reportFiles: 'trivy-image-CRITICAL-results.html',
-                reportName: 'Trivy Critical Report'
-            ])
+                reportDir: 'zap_output',
+                reportFiles: 'zap-report.html',
+                reportName: 'OWASP ZAP DAST Report'
+            ])        
             catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
                 echo '📦 Archiving artifacts....'
                 junit allowEmptyResults: true, testResults: 'test-results.xml'
