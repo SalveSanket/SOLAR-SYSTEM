@@ -322,9 +322,11 @@ pipeline {
 
                     catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                         sh '''
+                            # Prepare output directory
+                            rm -rf zap_output
                             mkdir -p zap_output
-                            chmod -R 777 zap_output
 
+                            # Run ZAP scan
                             docker run --rm \
                                 --network="host" \
                                 -v $(pwd)/zap_output:/zap/wrk \
@@ -333,12 +335,14 @@ pipeline {
                                 -t ${ZAP_TARGET_URL} \
                                 -r zap-report.html \
                                 -J zap-report.json \
+                                -x zap-report.xml \
                                 -m 2 -I || true
                         '''
                     }
 
                     echo "📄 ZAP scan completed. Publishing reports..."
 
+                    // Publish HTML report
                     publishHTML([
                         allowMissing: true,
                         alwaysLinkToLastBuild: true,
