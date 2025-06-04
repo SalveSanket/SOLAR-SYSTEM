@@ -317,25 +317,31 @@ pipeline {
                 ZAP_TARGET_URL = "http://192.168.49.2:32002"
             }
             steps {
-                echo "🔍 Starting ZAP DAST scan on ${env.ZAP_TARGET_URL}..."
+                script {
+                    echo "🔍 Starting OWASP ZAP DAST scan on ${ZAP_TARGET_URL}..."
 
-                sh '''
-                    mkdir -p zap_output
+                    catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                        sh '''
+                            # Create a local output directory with safe permissions
+                            mkdir -p zap_output
+                            chmod -R 777 zap_output
 
-                    docker run --rm \
-                        -v $(pwd)/zap_output:/zap/wrk \
-                        ghcr.io/zaproxy/zaproxy \
-                        zap-baseline.py \
-                        -t ${ZAP_TARGET_URL} \
-                        -r zap-report.html \
-                        -J zap-report.json \
-                        -x zap-report.xml \
-                        -m 2 -I || true
-                '''
-            }
-            post {
-                always {
-                    echo "📄 Publishing ZAP scan report..."
+                            # Run ZAP in host network mode with clean output dir
+                            docker run --rm \
+                                --network="host" \
+                                -v $(pwd)/zap_output:/zap/wrk \
+                                ghcr.io/zaproxy/zaproxy \
+                                zap-baseline.py \
+                                -t http://192.168.49.2:32002 \
+                                -r zap-report.html \
+                                -J zap-report.json \
+                                -x zap-report.xml \
+                                -m 2 -I || true
+                        '''
+                    }
+
+                    echo "📄 ZAP scan completed. Publishing reports..."
+
                     publishHTML([
                         allowMissing: true,
                         alwaysLinkToLastBuild: true,
@@ -345,12 +351,10 @@ pipeline {
                         reportName: 'OWASP ZAP DAST Report'
                     ])
 
-                    script {
-                        if (fileExists('zap_output/zap-report.xml')) {
-                            junit 'zap_output/zap-report.xml'
-                        } else {
-                            echo "⚠️ JUnit XML report not found. Skipping test report step."
-                        }
+                    if (fileExists('zap_output/zap-report.xml')) {
+                        junit 'zap_output/zap-report.xml'
+                    } else {
+                        echo "⚠️ JUnit XML report not found. Skipping test report step."
                     }
                 }
             }
