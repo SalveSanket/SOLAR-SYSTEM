@@ -322,20 +322,17 @@ pipeline {
 
                     catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                         sh '''
-                            # Create a local output directory with safe permissions
                             mkdir -p zap_output
                             chmod -R 777 zap_output
 
-                            # Run ZAP in host network mode with clean output dir
                             docker run --rm \
                                 --network="host" \
                                 -v $(pwd)/zap_output:/zap/wrk \
                                 ghcr.io/zaproxy/zaproxy \
                                 zap-baseline.py \
-                                -t http://192.168.49.2:32002 \
+                                -t ${ZAP_TARGET_URL} \
                                 -r zap-report.html \
                                 -J zap-report.json \
-                                -x zap-report.xml \
                                 -m 2 -I || true
                         '''
                     }
@@ -350,12 +347,6 @@ pipeline {
                         reportFiles: 'zap-report.html',
                         reportName: 'OWASP ZAP DAST Report'
                     ])
-
-                    if (fileExists('zap_output/zap-report.xml')) {
-                        junit 'zap_output/zap-report.xml'
-                    } else {
-                        echo "⚠️ JUnit XML report not found. Skipping test report step."
-                    }
                 }
             }
         }
