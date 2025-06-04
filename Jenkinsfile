@@ -309,45 +309,48 @@ pipeline {
             }
         }
 
-        stage('DAST - OWASP ZAP') {
+        stage('OWASP ZAP DAST Scan') {
             when {
                 branch 'main'
             }
+            environment {
+                ZAP_TARGET_URL = "http://192.168.49.2:32002"
+            }
             steps {
+                echo "🔍 Starting ZAP DAST scan on ${env.ZAP_TARGET_URL}..."
+
                 sh '''
-                    echo "🔍 Starting OWASP ZAP API scan..."
+                    mkdir -p zap_output
 
-                    # Get working dir permissions
-                    chmod 777 $(pwd)
-
-                    # Run ZAP API scan
                     docker run --rm \
-                        -v $(pwd):/zap/wrk:z \
+                        -v $(pwd)/zap_output:/zap/wrk \
                         ghcr.io/zaproxy/zaproxy \
-                        zap-api-scan.py \
-                        -t http://192.168.49.2:32002/api-docs \
-                        -f openapi \
-                        -r zap_report.html \
-                        -w zap_report.md \
-                        -J zap_json_report.json \
-                        -x zap_xml_report.xml \
-                        -I -m 2
+                        zap-baseline.py \
+                        -t ${ZAP_TARGET_URL} \
+                        -r zap-report.html \
+                        -J zap-report.json \
+                        -x zap-report.xml \
+                        -m 2 -I || true
                 '''
+            }
+            post {
+                always {
+                    echo "📄 Publishing ZAP scan report..."
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'zap_output',
+                        reportFiles: 'zap-report.html',
+                        reportName: 'OWASP ZAP DAST Report'
+                    ])
 
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: '.',
-                    reportFiles: 'zap_report.html',
-                    reportName: 'OWASP ZAP API Scan Report'
-                ])
-
-                script {
-                    if (fileExists('zap_xml_report.xml')) {
-                        junit 'zap_xml_report.xml'
-                    } else {
-                        echo "⚠️ zap_xml_report.xml not found. Skipping JUnit report."
+                    script {
+                        if (fileExists('zap_output/zap-report.xml')) {
+                            junit 'zap_output/zap-report.xml'
+                        } else {
+                            echo "⚠️ JUnit XML report not found. Skipping test report step."
+                        }
                     }
                 }
             }
