@@ -365,6 +365,7 @@ pipeline {
                         bucket: 'nodejs-app-reports-bucket-jenkins',
                         path: "reports-$BUILD_ID/",
                     )
+                    echo '☁️ Reports uploaded to AWS S3 successfully!'
                 }
             }
         }
