@@ -345,6 +345,30 @@ pipeline {
             }
         }
 
+        stage('Upload - AWS S3'){
+            when {
+                branch 'main'
+            }
+            steps {
+                withAWS(credentials: 'AWS Jenkins Credentials', region: 'us-east-1') {
+                    echo '☁️ Uploading reports to AWS S3...'
+                    sh '''
+                        ls -lrt
+                        mkdir reports-$BUILD_ID
+                        cp -rf coverage/ reports-$BUILD_ID/
+                        cp -rf zap_output/ reports-$BUILD_ID/
+                        cp dependency*.* test-results.xml trivy*.* zap*.* reports-$BUILD_ID/
+                        ls -lrt reports-$BUILD_ID/
+                    '''
+                    s3Upload(
+                        file: "reports-$BUILD_ID",
+                        bucket: 'nodejs-app-reports-bucket-jenkins',
+                        path: "reports-$BUILD_ID/",
+                    )
+                }
+            }
+        }
+
         stage('Enforce Build Retention') {
             steps {
                 sh '/usr/local/bin/jenkins-rotate-builds.sh'
