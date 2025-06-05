@@ -345,27 +345,51 @@ pipeline {
             }
         }
 
-        stage('Upload - AWS S3'){
+        stage('Upload - AWS S3') {
             when {
                 branch 'main'
             }
             steps {
                 withAWS(credentials: 'AWS Jenkins Credentials', region: 'us-east-1') {
-                    echo '☁️ Uploading reports to AWS S3...'
+                    echo '☁️ Uploading available test reports to AWS S3...'
+
                     sh '''
-                        ls -lrt
-                        mkdir reports-$BUILD_ID
-                        cp -rf coverage/ reports-$BUILD_ID/
-                        cp -rf zap_output/ reports-$BUILD_ID/
-                        cp dependency*.* test-results.xml trivy*.* zap*.* reports-$BUILD_ID/
-                        ls -lrt reports-$BUILD_ID/
+                        REPORT_DIR=reports-$BUILD_ID
+                        mkdir -p $REPORT_DIR
+
+                        echo "📦 Collecting available reports..."
+
+                        [ -d coverage ] && cp -r coverage "$REPORT_DIR/"
+                        [ -d zap_output ] && cp -r zap_output "$REPORT_DIR/"
+
+                        for file in \
+                            dependency-check-gitlab.json \
+                            dependency-check-jenkins.html \
+                            dependency-check-junit.xml \
+                            dependency-check-report.csv \
+                            dependency-check-report.html \
+                            dependency-check-report.json \
+                            dependency-check-report.sarif \
+                            dependency-check-report.xml \
+                            test-results.xml \
+                            trivy-image-CRITICAL-results.json \
+                            trivy-image-MEDIUM-results.json \
+                            zap-report.html \
+                            zap-report.json \
+                            zap-report.xml
+                        do
+                            [ -f "$file" ] && cp "$file" "$REPORT_DIR/"
+                        done
+
+                        echo "✅ Final content in $REPORT_DIR:"
+                        ls -lhR $REPORT_DIR
                     '''
+
                     s3Upload(
                         file: "reports-$BUILD_ID",
                         bucket: 'nodejs-app-reports-bucket-jenkins',
-                        path: "reports-$BUILD_ID/",
+                        path: "reports-$BUILD_ID/"
                     )
-                    echo '☁️ Reports uploaded to AWS S3 successfully!'
                 }
             }
         }
