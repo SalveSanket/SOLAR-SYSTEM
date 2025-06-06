@@ -405,9 +405,16 @@ pipeline {
                         tail -5 app.js
                         echo "**************************************************"
                         echo "Modifying app.js to disable server listening and enable Lambda handler..."
-                        sed -i "/^app\\.listen(3000/ s/^/\\/\\//" app.js
-                        sed -i "s/^module.expoarts = app;/\\/\\/module.exports = app;/g" app.js
-                        sed -i "s|^//module.exports.handler|module.exports.handler|" app.js
+
+                        # Comment out app.listen line
+                        sed -i "s/^\\s*app\\.listen(3000/\\/\\/app.listen(3000/" app.js
+
+                        # Comment out module.exports = app
+                        sed -i "s/^module\\.exports = app;/\\/\\/module.exports = app;/g" app.js
+
+                        # Uncomment module.exports.handler
+                        sed -i "s|^//module\\.exports\\.handler|module.exports.handler|" app.js
+
                         echo "Modified app.js to disable server listening and enable Lambda handler."
                         echo "**************************************************"
                         tail -5 app.js
@@ -415,7 +422,7 @@ pipeline {
                     sh '''
                         echo "📦 Packaging Lambda function..."
                         zip -qr solar-system-lambda-$BUILD_ID.zip app.js package.json index.html node_modules
-                        ls lrt solar-system-lambda-$BUILD_ID.zip
+                        ls -lrt solar-system-lambda-$BUILD_ID.zip
                         echo "📦 Lambda function packaged successfully!"
                     '''
                     s3Upload(
