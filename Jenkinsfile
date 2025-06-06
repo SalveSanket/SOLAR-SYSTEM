@@ -405,7 +405,7 @@ pipeline {
                         tail -5 app.js
                         echo "**************************************************"
                         echo "Modifying app.js to disable server listening and enable Lambda handler..."
-                        sed -i "/^app\\.listen(3000/ s/^/\\/\\//" app.js)"
+                        sed -i "/^app\\.listen(3000/ s/^/\\/\\//" app.js
                         sed -i "s/^module.expoarts = app;/\\/\\/module.exports = app;/g" app.js
                         sed -i "s|^//module.exports.handler|module.exports.handler|" app.js
                         echo "Modified app.js to disable server listening and enable Lambda handler."
