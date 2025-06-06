@@ -106,11 +106,11 @@ pipeline {
                                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                                     echo '🔍 Running SonarQube analysis...'
                                     sh '''
-                                        ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                                        o${SONAR_SCANNER_HOME}/bin/sonar-scanner \
                                         -Dsonar.projectKey=Solar_System-Project \
                                         -Dsonar.sources=app.js \
                                         -Dsonar.host.url=http://98.81.130.171:9000 \
-                                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.inf
                                     '''
                                 }
                             }
@@ -391,6 +391,66 @@ pipeline {
                         path: "reports-$BUILD_ID/"
                     )
                 }
+            }
+        }
+
+        stage('Lambda - S3 Upload and Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                withAWS(credentials: 'AWS Jenkins Credentials', region: 'us-east-1') {
+                    echo '🚀 Triggering Lambda function to upload reports and deploy...'
+
+                    // Modify app.js to be Lambda-compatible
+                    sh '''
+                        echo "🔧 Modifying app.js for Lambda..."
+                        tail -n 5 app.js
+                        echo "**************************************************"
+
+                        sed -i 's/^app\\.listen(3000/\\/\\/app.listen(3000/' app.js
+                        sed -i 's/^module\\.exports = app;/\\/\\/module.exports = app;/' app.js
+                        sed -i 's|^//module\\.exports\\.handler|module.exports.handler|' app.js
+
+                        echo "✅ app.js modified for Lambda"
+                        echo "**************************************************"
+                        tail -n 5 app.js
+                    '''
+
+                    // Zip Lambda code
+                    sh '''
+                        echo "📦 Packaging Lambda function..."
+                        zip -qr solar-system-lambda-$BUILD_ID.zip app.js package.json index.html node_modules
+                        ls -lh solar-system-lambda-$BUILD_ID.zip
+                        echo "✅ Lambda function packaged!"
+                    '''
+
+                    // Upload to S3
+                    s3Upload(
+                        file: "solar-system-lambda-$BUILD_ID.zip",
+                        bucket: 'solar-system-lambda-deployment-bucket',
+                        path: "packages/"
+                    )
+
+                    // Trigger Lambda function (NOTE: s3Key param only applies for events)
+                    sh '''
+                        echo "🔗 Triggering Lambda function deployment (manual invoke)..."
+                        aws lambda update-function-code \
+                            --function-name solar-system-lambda-function \
+                            --s3-bucket solar-system-lambda-deployment-bucket \
+                            --s3-key packages/solar-system-lambda-$BUILD_ID.zip \
+                            --publish
+
+                        echo "✅ Lambda function code updated!"
+
+                        aws lambda invoke \
+                            --function-name solar-system-lambda-function \
+                            output.json
+
+                        echo "📨 Lambda function invoked. Output saved in output.json"
+                    '''
+                }
+                echo '✅ Lambda deployment stage completed successfully!'
             }
         }
 
