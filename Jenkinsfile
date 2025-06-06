@@ -402,34 +402,37 @@ pipeline {
                 withAWS(credentials: 'AWS Jenkins Credentials', region: 'us-east-1') {
                     echo '🚀 Preparing Lambda-compatible package and uploading to S3...'
 
-                    sh '''
-                        echo "📦 Packaging Lambda code..."
-                        zip -qr solar-system-lambda-$BUILD_ID.zip app.js package.json index.html node_modules
-                        echo "✅ Lambda zip created: solar-system-lambda-$BUILD_ID.zip"
-                    '''
+                    script {
+                        def lambdaZip = "solar-system-lambda-${BUILD_ID}.zip"
+                        sh """
+                            echo "📦 Packaging Lambda code..."
+                            zip -qr ${lambdaZip} app.js package.json index.html node_modules
+                            echo "✅ Lambda zip created: ${lambdaZip}"
+                        """
 
-                    s3Upload(
-                        file: "solar-system-lambda-$BUILD_ID.zip",
-                        bucket: 'solar-system-lambda-deployment-bucket',
-                        path: "packages/"
-                    )
+                        s3Upload(
+                            file: lambdaZip,
+                            bucket: 'solar-system-lambda-deployment-bucket',
+                            path: "packages/"
+                        )
 
-                    sh '''
-                        echo "🚀 Updating Lambda function..."
-                        aws lambda update-function-code \
-                            --function-name solar-system-lambda-function \
-                            --s3-bucket solar-system-lambda-deployment-bucket \
-                            --s3-key packages/solar-system-lambda-$BUILD_ID.zip \
-                            --publish
+                        sh """
+                            echo "🚀 Updating Lambda function..."
+                            aws lambda update-function-code \\
+                                --function-name solar-system-lambda-function \\
+                                --s3-bucket solar-system-lambda-deployment-bucket \\
+                                --s3-key packages/${lambdaZip} \\
+                                --publish
 
-                        echo "✅ Lambda function code updated!"
+                            echo "✅ Lambda function code updated!"
 
-                        aws lambda invoke \
-                            --function-name solar-system-lambda-function \
-                            output.json
+                            aws lambda invoke \\
+                                --function-name solar-system-lambda-function \\
+                                output.json
 
-                        echo "📨 Lambda function invoked. Check output.json"
-                    '''
+                            echo "📨 Lambda function invoked. Check output.json"
+                        """
+                    }
                 }
             }
         }
