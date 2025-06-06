@@ -404,23 +404,24 @@ pipeline {
 
                     // Modify app.js to be Lambda-compatible
                     sh '''
+                        echo "📄 Previewing app.js before modification:"
                         tail -5 app.js
                         echo "**************************************************"
-                        echo "Modifying app.js to disable server listening and enable Lambda handler..."
+                        echo "🔧 Modifying app.js for Lambda compatibility..."
                         sed -i "s/^app\\.listen(3000.*$/\\/\\/&/" app.js
                         sed -i "s/^module\\.exports = app;/\\/\\/module.exports = app;/g" app.js
                         sed -i "s|^//module.exports.handler|module.exports.handler|" app.js
-                        echo "Modified app.js to disable server listening and enable Lambda handler."
+                        echo "✅ app.js updated successfully!"
                         echo "**************************************************"
                         tail -5 app.js
                     '''
 
-                    // Zip Lambda code
+                    // Package Lambda code
                     sh '''
                         echo "📦 Packaging Lambda function..."
                         zip -qr solar-system-lambda-$BUILD_ID.zip app.js package.json index.html node_modules
                         ls -lh solar-system-lambda-$BUILD_ID.zip
-                        echo "✅ Lambda function packaged!"
+                        echo "✅ Lambda package created."
                     '''
 
                     // Upload to S3
@@ -430,22 +431,24 @@ pipeline {
                         path: "packages/"
                     )
 
-                    // Trigger Lambda function
+                    // Trigger Lambda deployment and invocation
                     sh '''
-                        echo "🔗 Triggering Lambda function deployment (manual invoke)..."
+                        echo "📤 Deploying Lambda from S3..."
                         aws lambda update-function-code \
                             --function-name solar-system-lambda-function \
                             --s3-bucket solar-system-lambda-deployment-bucket \
                             --s3-key packages/solar-system-lambda-$BUILD_ID.zip \
                             --publish
 
-                        echo "✅ Lambda function code updated!"
+                        echo "✅ Lambda function code updated."
 
+                        echo "📨 Invoking Lambda function..."
                         aws lambda invoke \
                             --function-name solar-system-lambda-function \
                             output.json
 
-                        echo "📨 Lambda function invoked. Output saved in output.json"
+                        echo "📝 Invocation result:"
+                        cat output.json
                     '''
                 }
                 echo '✅ Lambda deployment stage completed successfully!'
