@@ -13,22 +13,25 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '/')));
 app.use(cors());
 
-// Mongoose connection
+// MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
     user: process.env.MONGO_USERNAME,
     pass: process.env.MONGO_PASSWORD,
 })
 .then(() => {
     console.log('✅ MongoDB Connected');
-    // Start server only after DB connects
-    app.listen(3000, '0.0.0.0', () => {
-        console.log("🚀 Server running on port 3000");
-    });
+    // Only run local server outside of Lambda
+    if (!process.env.LAMBDA_TASK_ROOT) {
+        app.listen(3000, '0.0.0.0', () => {
+            console.log("🚀 Server running on port 3000");
+        });
+    }
 })
 .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
 });
 
+// Schema and model
 const dataSchema = new mongoose.Schema({
     name: String,
     id: Number,
@@ -39,7 +42,7 @@ const dataSchema = new mongoose.Schema({
 });
 const planetModel = mongoose.model('planets', dataSchema);
 
-// API endpoint to fetch planet
+// API
 app.post('/planet', async (req, res) => {
     try {
         const planetData = await planetModel.findOne({ id: req.body.id });
@@ -53,12 +56,10 @@ app.post('/planet', async (req, res) => {
     }
 });
 
-// Root route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/', 'index.html'));
 });
 
-// API docs
 app.get('/api-docs', (req, res) => {
     fs.readFile('oas.json', 'utf8', (err, data) => {
         if (err) {
@@ -70,28 +71,12 @@ app.get('/api-docs', (req, res) => {
     });
 });
 
-// Health check endpoints
+// Health Checks
 app.get('/os', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.send({
-        "os": OS.hostname(),
-        "env": process.env.NODE_ENV
-    });
+    res.json({ os: OS.hostname(), env: process.env.NODE_ENV });
 });
-
-app.get('/live', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.send({
-        "status": "live"
-    });
-});
-
-app.get('/ready', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.send({
-        "status": "ready"
-    });
-});
+app.get('/live', (req, res) => res.json({ status: 'live' }));
+app.get('/ready', (req, res) => res.json({ status: 'ready' }));
 
 module.exports = app;
-// module.exports.handler = serverless(app)
+module.exports.handler = serverless(app);

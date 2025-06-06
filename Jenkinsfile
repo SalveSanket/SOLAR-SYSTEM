@@ -394,51 +394,43 @@ pipeline {
             }
         }
 
-        stage('Lambda - s3 upload and Deploy'){
+        stage('Lambda - S3 Upload and Deploy') {
             when {
                 branch 'main'
             }
             steps {
                 withAWS(credentials: 'AWS Jenkins Credentials', region: 'us-east-1') {
-                    echo '🚀 Triggering Lambda function to upload reports and deploy...'
+                    echo '🚀 Preparing Lambda-compatible package and uploading to S3...'
+
                     sh '''
-                        tail -5 app.js
-                        echo "**************************************************"
-                        echo "Modifying app.js to disable server listening and enable Lambda handler..."
-
-                        # Comment out app.listen line
-                        sed -i "s/^\\s*app\\.listen(3000/\\/\\/app.listen(3000/" app.js
-
-                        # Comment out module.exports = app
-                        sed -i "s/^module\\.exports = app;/\\/\\/module.exports = app;/g" app.js
-
-                        # Uncomment module.exports.handler
-                        sed -i "s|^//module\\.exports\\.handler|module.exports.handler|" app.js
-
-                        echo "Modified app.js to disable server listening and enable Lambda handler."
-                        echo "**************************************************"
-                        tail -5 app.js
-                    '''
-                    sh '''
-                        echo "📦 Packaging Lambda function..."
+                        echo "📦 Packaging Lambda code..."
                         zip -qr solar-system-lambda-$BUILD_ID.zip app.js package.json index.html node_modules
-                        ls -lrt solar-system-lambda-$BUILD_ID.zip
-                        echo "📦 Lambda function packaged successfully!"
+                        echo "✅ Lambda zip created: solar-system-lambda-$BUILD_ID.zip"
                     '''
+
                     s3Upload(
                         file: "solar-system-lambda-$BUILD_ID.zip",
                         bucket: 'solar-system-lambda-deployment-bucket',
                         path: "packages/"
                     )
+
                     sh '''
-                        echo "🔗 Triggering Lambda function to upload reports and deploy..."
+                        echo "🚀 Updating Lambda function..."
+                        aws lambda update-function-code \
+                            --function-name solar-system-lambda-function \
+                            --s3-bucket solar-system-lambda-deployment-bucket \
+                            --s3-key packages/solar-system-lambda-$BUILD_ID.zip \
+                            --publish
+
+                        echo "✅ Lambda function code updated!"
+
                         aws lambda invoke \
                             --function-name solar-system-lambda-function \
-                            --s3-key "solar-system-lambda-$BUILD_ID.zip" \
-                            echo "Lambda function invoked successfully!"
+                            output.json
+
+                        echo "📨 Lambda function invoked. Check output.json"
                     '''
                 }
-                echo '✅ Lambda function executed successfully!'
             }
         }
 
