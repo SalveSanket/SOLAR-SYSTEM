@@ -404,17 +404,15 @@ pipeline {
 
                     // Modify app.js to be Lambda-compatible
                     sh '''
-                        echo "🔧 Modifying app.js for Lambda..."
-                        tail -n 5 app.js
+                        tail -5 app.js
                         echo "**************************************************"
-
-                        sed -i 's/^app\\.listen(3000/\\/\\/app.listen(3000/' app.js
-                        sed -i 's/^module\\.exports = app;/\\/\\/module.exports = app;/' app.js
-                        sed -i 's|^//module\\.exports\\.handler|module.exports.handler|' app.js
-
-                        echo "✅ app.js modified for Lambda"
+                        echo "Modifying app.js to disable server listening and enable Lambda handler..."
+                        sed -i "s/^app\\.listen(3000.*$/\\/\\/&/" app.js
+                        sed -i "s/^module\\.exports = app;/\\/\\/module.exports = app;/g" app.js
+                        sed -i "s|^//module.exports.handler|module.exports.handler|" app.js
+                        echo "Modified app.js to disable server listening and enable Lambda handler."
                         echo "**************************************************"
-                        tail -n 5 app.js
+                        tail -5 app.js
                     '''
 
                     // Zip Lambda code
@@ -432,7 +430,7 @@ pipeline {
                         path: "packages/"
                     )
 
-                    // Trigger Lambda function (NOTE: s3Key param only applies for events)
+                    // Trigger Lambda function
                     sh '''
                         echo "🔗 Triggering Lambda function deployment (manual invoke)..."
                         aws lambda update-function-code \
