@@ -405,8 +405,22 @@ pipeline {
                     script {
                         def lambdaZip = "solar-system-lambda-${BUILD_ID}.zip"
                         sh """
-                            echo "📦 Packaging Lambda code..."
-                            zip -qr ${lambdaZip} app.js package.json index.html node_modules
+                            echo "📦 Preparing Lambda build directory..."
+
+                            mkdir -p lambda-build
+                            cp app.js lambda-build/index.js
+                            cp package.json lambda-build/
+                            cp index.html lambda-build/
+                            cp oas.json lambda-build/
+                            cp -r node_modules lambda-build/
+
+                            echo "📦 Zipping with index.js as Lambda entry..."
+                            cd lambda-build
+                            zip -qr ../${lambdaZip} *
+
+                            cd ..
+                            rm -rf lambda-build
+
                             echo "✅ Lambda zip created: ${lambdaZip}"
                         """
 
