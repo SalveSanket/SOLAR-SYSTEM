@@ -7,6 +7,8 @@ pipeline {
 
     environment {
         MONGO_URI = "mongodb+srv://superuser:SuperPassword@supercluster.paumtlt.mongodb.net/?retryWrites=true&w=majority&appName=superCluster"
+        MONGO_USERNAME = credentials('MONGO_USERNAME')
+        MONGO_PASSWORD = credentials('MONGO_PASSWORD')
         SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
         AWS_EC2_HOST = '54.167.196.168'
@@ -429,6 +431,18 @@ pipeline {
                             bucket: 'solar-system-lambda-deployment-bucket',
                             path: "packages/"
                         )
+
+                        sh '''
+                            echo "🔧 Updating Lambda environment variables..."
+                                aws lambda update-function-configuration \
+                                    --function-name solar-system-lambda-function \
+                                    --environment Variables="{\
+                                    MONGO_URI=\\"$MONGO_URI\\",\
+                                    MONGO_USERNAME=\\"$MONGO_USERNAME\\",\
+                                    MONGO_PASSWORD=\\"$MONGO_PASSWORD\\"\
+                                    }"
+                                echo "✅ Lambda environment variables updated!"
+                            '''
 
                         sh """
                             echo "🚀 Updating Lambda function..."
